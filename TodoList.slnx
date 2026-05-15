@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TodoList.App/TodoList.App.csproj" />
+  </Folder>
+</Solution>
