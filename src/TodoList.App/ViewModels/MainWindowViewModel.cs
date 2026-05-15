@@ -34,6 +34,9 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private int completedCount;
 
+    [ObservableProperty]
+    private bool isPinned;
+
     public string SummaryText => $"{ActiveCount} active - {CompletedCount} completed";
 
     public MainWindowViewModel(ITodoRepository todoRepository)

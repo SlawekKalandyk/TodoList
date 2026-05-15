@@ -1,6 +1,7 @@
 using System;
 using Avalonia;
 using Avalonia.Controls;
+using TodoList.App.ViewModels;
 
 namespace TodoList.App.Views;
 
@@ -14,7 +15,7 @@ public partial class MainWindow : Window
         Opened += (_, _) => SnapToRightEdge();
         Deactivated += (_, _) =>
         {
-            if (IsVisible)
+            if (IsVisible && ShouldAutoHide())
             {
                 Hide();
             }
@@ -54,5 +55,15 @@ public partial class MainWindow : Window
         Position = new PixelPoint(
             workArea.X + workArea.Width - (int)Math.Round(PanelWidth * scaling),
             workArea.Y);
+    }
+
+    private bool ShouldAutoHide()
+    {
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            return !viewModel.IsPinned;
+        }
+
+        return true;
     }
 }
