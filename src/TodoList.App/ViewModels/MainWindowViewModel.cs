@@ -13,6 +13,7 @@ public partial class MainWindowViewModel : ViewModelBase
 {
     private const string NoGroupingOption = "None";
     private const string GroupByDayAddedOption = "Added day";
+    private const string GroupByPriorityOption = "Priority";
 
     private readonly ITodoRepository _todoRepository;
     private readonly List<TodoItemViewModel> _allTodos = new();
@@ -29,17 +30,41 @@ public partial class MainWindowViewModel : ViewModelBase
         TodoFilter.All,
     ];
 
+    public IReadOnlyList<TodoPriorityFilter> AvailablePriorityFilters { get; } =
+    [
+        TodoPriorityFilter.All,
+        TodoPriorityFilter.Minor,
+        TodoPriorityFilter.Normal,
+        TodoPriorityFilter.Major,
+        TodoPriorityFilter.Critical,
+    ];
+
+    public IReadOnlyList<TodoPriority> AvailablePriorities { get; } =
+    [
+        TodoPriority.Minor,
+        TodoPriority.Normal,
+        TodoPriority.Major,
+        TodoPriority.Critical,
+    ];
+
     public IReadOnlyList<string> AvailableGroupingOptions { get; } =
     [
         NoGroupingOption,
         GroupByDayAddedOption,
+        GroupByPriorityOption,
     ];
 
     [ObservableProperty]
     private string newTodoText = string.Empty;
 
     [ObservableProperty]
+    private TodoPriority newTodoPriority = TodoPriority.Normal;
+
+    [ObservableProperty]
     private TodoFilter selectedFilter = TodoFilter.Active;
+
+    [ObservableProperty]
+    private TodoPriorityFilter selectedPriorityFilter = TodoPriorityFilter.All;
 
     [ObservableProperty]
     private int activeCount;
@@ -59,7 +84,12 @@ public partial class MainWindowViewModel : ViewModelBase
     public bool GroupByDayAdded =>
         string.Equals(SelectedGroupingOption, GroupByDayAddedOption, StringComparison.Ordinal);
 
-    public bool ShowFlatList => !GroupByDayAdded;
+    public bool GroupByPriority =>
+        string.Equals(SelectedGroupingOption, GroupByPriorityOption, StringComparison.Ordinal);
+
+    public bool ShowFlatList => !GroupByDayAdded && !GroupByPriority;
+
+    public bool ShowGroupedList => !ShowFlatList;
 
     public string SummaryText =>
         $"{ActiveCount} active - {CompletedCount} completed - {RejectedCount} rejected";
@@ -71,6 +101,11 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     partial void OnSelectedFilterChanged(TodoFilter value)
+    {
+        ApplyFilter();
+    }
+
+    partial void OnSelectedPriorityFilterChanged(TodoPriorityFilter value)
     {
         ApplyFilter();
     }
@@ -93,7 +128,10 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnSelectedGroupingOptionChanged(string value)
     {
         OnPropertyChanged(nameof(GroupByDayAdded));
+        OnPropertyChanged(nameof(GroupByPriority));
         OnPropertyChanged(nameof(ShowFlatList));
+        OnPropertyChanged(nameof(ShowGroupedList));
+        ApplyFilter();
     }
 
     [RelayCommand]
@@ -105,7 +143,7 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        _todoRepository.Add(title);
+        _todoRepository.Add(title, NewTodoPriority);
         NewTodoText = string.Empty;
         LoadTodos();
     }
@@ -177,6 +215,15 @@ public partial class MainWindowViewModel : ViewModelBase
             _ => _allTodos,
         };
 
+        filteredTodos = SelectedPriorityFilter switch
+        {
+            TodoPriorityFilter.Minor => filteredTodos.Where(todo => todo.Priority == TodoPriority.Minor),
+            TodoPriorityFilter.Normal => filteredTodos.Where(todo => todo.Priority == TodoPriority.Normal),
+            TodoPriorityFilter.Major => filteredTodos.Where(todo => todo.Priority == TodoPriority.Major),
+            TodoPriorityFilter.Critical => filteredTodos.Where(todo => todo.Priority == TodoPriority.Critical),
+            _ => filteredTodos,
+        };
+
         var filteredList = filteredTodos.ToList();
 
         VisibleTodos.Clear();
@@ -185,7 +232,24 @@ public partial class MainWindowViewModel : ViewModelBase
             VisibleTodos.Add(todo);
         }
 
-        RebuildDayGroups(filteredList);
+        RebuildGroups(filteredList);
+    }
+
+    private void RebuildGroups(IReadOnlyList<TodoItemViewModel> todos)
+    {
+        if (GroupByDayAdded)
+        {
+            RebuildDayGroups(todos);
+            return;
+        }
+
+        if (GroupByPriority)
+        {
+            RebuildPriorityGroups(todos);
+            return;
+        }
+
+        VisibleTodoGroups.Clear();
     }
 
     private void RebuildDayGroups(IReadOnlyList<TodoItemViewModel> todos)
@@ -206,6 +270,23 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    private void RebuildPriorityGroups(IReadOnlyList<TodoItemViewModel> todos)
+    {
+        VisibleTodoGroups.Clear();
+
+        var groupedTodos = todos
+            .GroupBy(todo => todo.Priority)
+            .OrderByDescending(group => group.Key);
+
+        foreach (var priorityGroup in groupedTodos)
+        {
+            VisibleTodoGroups.Add(
+                new TodoDayGroupViewModel(
+                    BuildPriorityHeader(priorityGroup.Key),
+                    priorityGroup.OrderByDescending(todo => todo.CreatedAtUtc)));
+        }
+    }
+
     private static string BuildDayHeader(DateTime localDate)
     {
         var today = DateTime.Now.Date;
@@ -220,6 +301,11 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         return localDate.ToString("dddd, dd MMM yyyy");
+    }
+
+    private static string BuildPriorityHeader(TodoPriority priority)
+    {
+        return priority.ToString();
     }
 }
 

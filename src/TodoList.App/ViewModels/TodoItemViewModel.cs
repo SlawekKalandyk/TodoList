@@ -10,6 +10,10 @@ public sealed partial class TodoItemViewModel : ObservableObject
 
     public DateTimeOffset CreatedAtUtc { get; }
 
+    public TodoPriority Priority { get; }
+
+    public string PriorityLabel => Priority.ToString();
+
     [ObservableProperty]
     private string title;
 
@@ -24,12 +28,14 @@ public sealed partial class TodoItemViewModel : ObservableObject
     public TodoItemViewModel(
         long id,
         string title,
+        TodoPriority priority,
         bool isCompleted,
         bool isRejected,
         DateTimeOffset createdAtUtc)
     {
         Id = id;
         CreatedAtUtc = createdAtUtc;
+        Priority = priority;
         this.title = title;
         this.isCompleted = isCompleted;
         this.isRejected = isRejected;
@@ -40,6 +46,7 @@ public sealed partial class TodoItemViewModel : ObservableObject
         return new TodoItemViewModel(
             todo.Id,
             todo.Title,
+            todo.Priority,
             todo.IsCompleted,
             todo.IsRejected,
             todo.CreatedAtUtc);

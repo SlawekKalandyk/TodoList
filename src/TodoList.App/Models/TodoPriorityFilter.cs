@@ -1,10 +1,7 @@
 namespace TodoList.App.Models;
 
-public enum TodoFilter
+public enum TodoPriorityFilter
 {
-    Active,
-    Completed,
-    Rejected,
     All,
     Minor,
     Normal,

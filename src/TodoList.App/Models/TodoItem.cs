@@ -8,6 +8,8 @@ public sealed class TodoItem
 
     public string Title { get; init; } = string.Empty;
 
+    public TodoPriority Priority { get; init; } = TodoPriority.Normal;
+
     public bool IsCompleted { get; init; }
 
     public bool IsRejected { get; init; }

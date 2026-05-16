@@ -79,7 +79,7 @@
                 </ToggleButton>
             </Grid>
 
-            <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                 <TextBox Grid.Column="0"
                          Text="{Binding NewTodoText}"
                          Watermark="Add a new task"
@@ -88,21 +88,30 @@
                         <KeyBinding Gesture="Enter" Command="{Binding AddTodoCommand}" />
                     </TextBox.KeyBindings>
                 </TextBox>
-                <Button Grid.Column="1"
+                <ComboBox Grid.Column="1"
+                          MinWidth="108"
+                          ItemsSource="{Binding AvailablePriorities}"
+                          SelectedItem="{Binding NewTodoPriority}" />
+                <Button Grid.Column="2"
                         Content="Add"
                         Padding="14,8"
                         Command="{Binding AddTodoCommand}" />
             </Grid>
 
             <Grid Grid.Row="2" RowDefinitions="Auto,*" RowSpacing="8">
-                <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto,*,Auto" ColumnSpacing="8">
                     <TextBlock Grid.Column="0"
                                VerticalAlignment="Center"
                                Text="View" />
                     <ComboBox Grid.Column="1"
+                              MinWidth="150"
                               ItemsSource="{Binding AvailableFilters}"
                               SelectedItem="{Binding SelectedFilter}" />
                     <ComboBox Grid.Column="2"
+                              MinWidth="120"
+                              ItemsSource="{Binding AvailablePriorityFilters}"
+                              SelectedItem="{Binding SelectedPriorityFilter}" />
+                    <ComboBox Grid.Column="4"
                               MinWidth="140"
                               ItemsSource="{Binding AvailableGroupingOptions}"
                               SelectedItem="{Binding SelectedGroupingOption}" />
@@ -120,10 +129,14 @@
                                                   IsChecked="{Binding IsCompleted}"
                                                   Command="{Binding #RootWindow.DataContext.ToggleCompletedCommand}"
                                                   CommandParameter="{Binding}" />
-                                        <TextBlock Grid.Column="1"
-                                                   Text="{Binding Title}"
-                                                   VerticalAlignment="Center"
-                                                   TextWrapping="Wrap" />
+                                        <StackPanel Grid.Column="1" Spacing="2">
+                                            <TextBlock Text="{Binding Title}"
+                                                       VerticalAlignment="Center"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock Text="{Binding PriorityLabel}"
+                                                       Opacity="0.75"
+                                                       FontSize="11" />
+                                        </StackPanel>
                                         <Button Grid.Column="2"
                                                 VerticalAlignment="Top"
                                                 IsVisible="{Binding CanReject}"
@@ -140,7 +153,7 @@
                             </ListBox.ItemTemplate>
                         </ListBox>
 
-                        <ScrollViewer Classes="todoListContent" IsVisible="{Binding GroupByDayAdded}" Padding="6">
+                        <ScrollViewer Classes="todoListContent" IsVisible="{Binding ShowGroupedList}" Padding="6">
                             <ItemsControl ItemsSource="{Binding VisibleTodoGroups}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="vm:TodoDayGroupViewModel">
@@ -158,10 +171,14 @@
                                                                       IsChecked="{Binding IsCompleted}"
                                                                       Command="{Binding #RootWindow.DataContext.ToggleCompletedCommand}"
                                                                       CommandParameter="{Binding}" />
-                                                            <TextBlock Grid.Column="1"
-                                                                       Text="{Binding Title}"
-                                                                       VerticalAlignment="Center"
-                                                                       TextWrapping="Wrap" />
+                                                            <StackPanel Grid.Column="1" Spacing="2">
+                                                                <TextBlock Text="{Binding Title}"
+                                                                           VerticalAlignment="Center"
+                                                                           TextWrapping="Wrap" />
+                                                                <TextBlock Text="{Binding PriorityLabel}"
+                                                                           Opacity="0.75"
+                                                                           FontSize="11" />
+                                                            </StackPanel>
                                                             <Button Grid.Column="2"
                                                                     VerticalAlignment="Top"
                                                                     IsVisible="{Binding CanReject}"

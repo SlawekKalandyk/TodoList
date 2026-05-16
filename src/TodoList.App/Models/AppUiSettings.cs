@@ -8,5 +8,7 @@ public sealed class AppUiSettings
 
     public TodoFilter SelectedFilter { get; set; } = TodoFilter.Active;
 
+    public TodoPriorityFilter SelectedPriorityFilter { get; set; } = TodoPriorityFilter.All;
+
     public string SelectedGroupingOption { get; set; } = "None";
 }

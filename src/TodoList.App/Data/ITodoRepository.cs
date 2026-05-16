@@ -7,7 +7,7 @@ public interface ITodoRepository
 {
     IReadOnlyList<TodoItem> GetAll();
 
-    long Add(string title);
+    long Add(string title, TodoPriority priority);
 
     void SetCompleted(long id, bool isCompleted);
 

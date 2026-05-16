@@ -51,6 +51,7 @@ public partial class App : Application
 
             mainWindowViewModel.IsPinned = appSettings.IsPinned;
             mainWindowViewModel.SelectedFilter = appSettings.SelectedFilter;
+            mainWindowViewModel.SelectedPriorityFilter = appSettings.SelectedPriorityFilter;
             mainWindowViewModel.SelectedGroupingOption = appSettings.SelectedGroupingOption;
 
             WireSettingsPersistence(_mainWindow, mainWindowViewModel, settingsStore, desktop);
@@ -89,13 +90,24 @@ public partial class App : Application
             groupingOption = defaultGroupingOption;
         }
 
+        var selectedFilter = Enum.IsDefined(typeof(TodoFilter), settings.SelectedFilter)
+            ? settings.SelectedFilter
+            : TodoFilter.Active;
+
+        var selectedPriorityFilter = Enum.IsDefined(typeof(TodoPriorityFilter), settings.SelectedPriorityFilter)
+            ? settings.SelectedPriorityFilter
+            : TodoPriorityFilter.All;
+
+        (selectedFilter, selectedPriorityFilter) = NormalizeLegacyCombinedFilter(
+            selectedFilter,
+            selectedPriorityFilter);
+
         return new AppUiSettings
         {
             WidthPercent = Math.Clamp(settings.WidthPercent, 50m, 200m),
             IsPinned = settings.IsPinned,
-            SelectedFilter = Enum.IsDefined(typeof(TodoFilter), settings.SelectedFilter)
-                ? settings.SelectedFilter
-                : TodoFilter.Active,
+            SelectedFilter = selectedFilter,
+            SelectedPriorityFilter = selectedPriorityFilter,
             SelectedGroupingOption = groupingOption,
         };
     }
@@ -109,6 +121,7 @@ public partial class App : Application
             WidthPercent = Math.Clamp(mainWindow.WidthPercent, 50m, 200m),
             IsPinned = viewModel.IsPinned,
             SelectedFilter = viewModel.SelectedFilter,
+            SelectedPriorityFilter = viewModel.SelectedPriorityFilter,
             SelectedGroupingOption = viewModel.SelectedGroupingOption,
         };
     }
@@ -136,6 +149,7 @@ public partial class App : Application
         {
             if (e.PropertyName is nameof(MainWindowViewModel.IsPinned)
                 or nameof(MainWindowViewModel.SelectedFilter)
+                or nameof(MainWindowViewModel.SelectedPriorityFilter)
                 or nameof(MainWindowViewModel.SelectedGroupingOption))
             {
                 SaveCurrentSettings();
@@ -146,6 +160,36 @@ public partial class App : Application
 
         // Ensure defaults or sanitized values are written even before first user interaction.
         SaveCurrentSettings();
+    }
+
+    private static (TodoFilter selectedFilter, TodoPriorityFilter selectedPriorityFilter)
+        NormalizeLegacyCombinedFilter(
+            TodoFilter selectedFilter,
+            TodoPriorityFilter selectedPriorityFilter)
+    {
+        if (selectedPriorityFilter != TodoPriorityFilter.All)
+        {
+            return (NormalizeStatusFilter(selectedFilter), selectedPriorityFilter);
+        }
+
+        return selectedFilter switch
+        {
+            TodoFilter.Minor => (TodoFilter.All, TodoPriorityFilter.Minor),
+            TodoFilter.Normal => (TodoFilter.All, TodoPriorityFilter.Normal),
+            TodoFilter.Major => (TodoFilter.All, TodoPriorityFilter.Major),
+            TodoFilter.Critical => (TodoFilter.All, TodoPriorityFilter.Critical),
+            _ => (NormalizeStatusFilter(selectedFilter), selectedPriorityFilter),
+        };
+    }
+
+    private static TodoFilter NormalizeStatusFilter(TodoFilter selectedFilter)
+    {
+        return selectedFilter is TodoFilter.Active
+            or TodoFilter.Completed
+            or TodoFilter.Rejected
+            or TodoFilter.All
+            ? selectedFilter
+            : TodoFilter.Active;
     }
 
     private void TrayIcon_OnClicked(object? sender, EventArgs e)
