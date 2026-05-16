@@ -4,5 +4,6 @@ public enum TodoFilter
 {
     Active,
     Completed,
+    Rejected,
     All,
 }

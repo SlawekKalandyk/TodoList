@@ -19,6 +19,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [
         TodoFilter.Active,
         TodoFilter.Completed,
+        TodoFilter.Rejected,
         TodoFilter.All,
     ];
 
@@ -35,9 +36,13 @@ public partial class MainWindowViewModel : ViewModelBase
     private int completedCount;
 
     [ObservableProperty]
+    private int rejectedCount;
+
+    [ObservableProperty]
     private bool isPinned;
 
-    public string SummaryText => $"{ActiveCount} active - {CompletedCount} completed";
+    public string SummaryText =>
+        $"{ActiveCount} active - {CompletedCount} completed - {RejectedCount} rejected";
 
     public MainWindowViewModel(ITodoRepository todoRepository)
     {
@@ -56,6 +61,11 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     partial void OnCompletedCountChanged(int value)
+    {
+        OnPropertyChanged(nameof(SummaryText));
+    }
+
+    partial void OnRejectedCountChanged(int value)
     {
         OnPropertyChanged(nameof(SummaryText));
     }
@@ -79,6 +89,12 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (todo is null)
         {
+            return;
+        }
+
+        if (todo.IsRejected)
+        {
+            LoadTodos();
             return;
         }
 
@@ -126,8 +142,9 @@ public partial class MainWindowViewModel : ViewModelBase
             _allTodos.Add(TodoItemViewModel.From(todo));
         }
 
-        ActiveCount = _allTodos.Count(todo => !todo.IsCompleted);
-        CompletedCount = _allTodos.Count - ActiveCount;
+        ActiveCount = _allTodos.Count(todo => !todo.IsCompleted && !todo.IsRejected);
+        CompletedCount = _allTodos.Count(todo => todo.IsCompleted && !todo.IsRejected);
+        RejectedCount = _allTodos.Count(todo => todo.IsRejected);
         ApplyFilter();
     }
 
@@ -135,8 +152,9 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         IEnumerable<TodoItemViewModel> filteredTodos = SelectedFilter switch
         {
-            TodoFilter.Active => _allTodos.Where(todo => !todo.IsCompleted),
-            TodoFilter.Completed => _allTodos.Where(todo => todo.IsCompleted),
+            TodoFilter.Active => _allTodos.Where(todo => !todo.IsCompleted && !todo.IsRejected),
+            TodoFilter.Completed => _allTodos.Where(todo => todo.IsCompleted && !todo.IsRejected),
+            TodoFilter.Rejected => _allTodos.Where(todo => todo.IsRejected),
             _ => _allTodos,
         };
 

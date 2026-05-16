@@ -42,8 +42,7 @@ public sealed class SqliteTodoRepository : ITodoRepository
             """
             SELECT Id, Title, IsCompleted, IsRejected, CreatedAtUtc, CompletedAtUtc
             FROM Todos
-            WHERE IsRejected = 0
-            ORDER BY IsCompleted ASC, CreatedAtUtc DESC, Id DESC;
+            ORDER BY IsRejected ASC, IsCompleted ASC, CreatedAtUtc DESC, Id DESC;
             """;
 
         using var reader = command.ExecuteReader();

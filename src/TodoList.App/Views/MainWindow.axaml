@@ -99,6 +99,7 @@
                                                TextWrapping="Wrap" />
                                     <Button Grid.Column="2"
                                             VerticalAlignment="Top"
+                                            IsVisible="{Binding CanReject}"
                                             Content="Reject"
                                             Command="{Binding #RootWindow.DataContext.RejectTodoCommand}"
                                             CommandParameter="{Binding}" />
