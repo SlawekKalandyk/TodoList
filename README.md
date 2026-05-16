@@ -13,6 +13,8 @@ Avalonia desktop todo app designed as a right-side panel opened from the system 
 	- Always on top
 	- Anchored to the right side of the current screen work area
 	- Hides when it loses focus
+- Theming:
+	- Dark theme only
 - Todo features:
 	- Quick add textbox at the top
 	- Enter-to-add and Add button
