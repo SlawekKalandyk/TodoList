@@ -9,6 +9,8 @@ public interface ITodoRepository
 
     long Add(string title, TodoPriority priority);
 
+    void Rename(long id, string title);
+
     void SetCompleted(long id, bool isCompleted);
 
     void Reject(long id);

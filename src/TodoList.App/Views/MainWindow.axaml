@@ -122,7 +122,10 @@
                         <ListBox Classes="todoListContent" IsVisible="{Binding ShowFlatList}" ItemsSource="{Binding VisibleTodos}" Padding="6">
                             <ListBox.ItemTemplate>
                                 <DataTemplate x:DataType="vm:TodoItemViewModel">
-                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8" Margin="4">
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto"
+                                          ColumnSpacing="8"
+                                          Margin="4"
+                                          DoubleTapped="TodoItemRow_OnDoubleTapped">
                                         <CheckBox Grid.Column="0"
                                                   VerticalAlignment="Top"
                                                   Margin="0,2,0,0"
@@ -130,12 +133,26 @@
                                                   Command="{Binding #RootWindow.DataContext.ToggleCompletedCommand}"
                                                   CommandParameter="{Binding}" />
                                         <StackPanel Grid.Column="1" Spacing="2">
-                                            <TextBlock Text="{Binding Title}"
-                                                       VerticalAlignment="Center"
-                                                       TextWrapping="Wrap" />
-                                            <TextBlock Text="{Binding PriorityLabel}"
-                                                       Opacity="0.75"
-                                                       FontSize="11" />
+                                            <StackPanel IsVisible="{Binding IsNotRenaming}" Spacing="2">
+                                                <TextBlock Text="{Binding Title}"
+                                                           VerticalAlignment="Center"
+                                                           TextWrapping="Wrap" />
+                                                <TextBlock Text="{Binding PriorityLabel}"
+                                                           Opacity="0.75"
+                                                           FontSize="11" />
+                                            </StackPanel>
+                                            <TextBox IsVisible="{Binding IsRenaming}"
+                                                     Text="{Binding RenameText}"
+                                                     LostFocus="TodoRenameTextBox_OnLostFocus">
+                                                <TextBox.KeyBindings>
+                                                    <KeyBinding Gesture="Enter"
+                                                                Command="{Binding #RootWindow.DataContext.CommitRenameTodoCommand}"
+                                                                CommandParameter="{Binding}" />
+                                                    <KeyBinding Gesture="Escape"
+                                                                Command="{Binding #RootWindow.DataContext.CancelRenameTodoCommand}"
+                                                                CommandParameter="{Binding}" />
+                                                </TextBox.KeyBindings>
+                                            </TextBox>
                                         </StackPanel>
                                         <Button Grid.Column="2"
                                                 VerticalAlignment="Top"
@@ -164,7 +181,10 @@
                                             <ItemsControl ItemsSource="{Binding Items}">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate x:DataType="vm:TodoItemViewModel">
-                                                        <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8" Margin="4">
+                                                        <Grid ColumnDefinitions="Auto,*,Auto,Auto"
+                                                              ColumnSpacing="8"
+                                                              Margin="4"
+                                                              DoubleTapped="TodoItemRow_OnDoubleTapped">
                                                             <CheckBox Grid.Column="0"
                                                                       VerticalAlignment="Top"
                                                                       Margin="0,2,0,0"
@@ -172,12 +192,26 @@
                                                                       Command="{Binding #RootWindow.DataContext.ToggleCompletedCommand}"
                                                                       CommandParameter="{Binding}" />
                                                             <StackPanel Grid.Column="1" Spacing="2">
-                                                                <TextBlock Text="{Binding Title}"
-                                                                           VerticalAlignment="Center"
-                                                                           TextWrapping="Wrap" />
-                                                                <TextBlock Text="{Binding PriorityLabel}"
-                                                                           Opacity="0.75"
-                                                                           FontSize="11" />
+                                                                <StackPanel IsVisible="{Binding IsNotRenaming}" Spacing="2">
+                                                                    <TextBlock Text="{Binding Title}"
+                                                                               VerticalAlignment="Center"
+                                                                               TextWrapping="Wrap" />
+                                                                    <TextBlock Text="{Binding PriorityLabel}"
+                                                                               Opacity="0.75"
+                                                                               FontSize="11" />
+                                                                </StackPanel>
+                                                                <TextBox IsVisible="{Binding IsRenaming}"
+                                                                         Text="{Binding RenameText}"
+                                                                         LostFocus="TodoRenameTextBox_OnLostFocus">
+                                                                    <TextBox.KeyBindings>
+                                                                        <KeyBinding Gesture="Enter"
+                                                                                    Command="{Binding #RootWindow.DataContext.CommitRenameTodoCommand}"
+                                                                                    CommandParameter="{Binding}" />
+                                                                        <KeyBinding Gesture="Escape"
+                                                                                    Command="{Binding #RootWindow.DataContext.CancelRenameTodoCommand}"
+                                                                                    CommandParameter="{Binding}" />
+                                                                    </TextBox.KeyBindings>
+                                                                </TextBox>
                                                             </StackPanel>
                                                             <Button Grid.Column="2"
                                                                     VerticalAlignment="Top"

@@ -1,7 +1,12 @@
 using System;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Platform;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 using TodoList.App.ViewModels;
 
 namespace TodoList.App.Views;
@@ -131,5 +136,58 @@ public partial class MainWindow : Window
         }
 
         return true;
+    }
+
+    private void TodoItemRow_OnDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel
+            || sender is not Control row
+            || row.DataContext is not TodoItemViewModel todo)
+        {
+            return;
+        }
+
+        if (e.Source is Visual sourceVisual
+            && (sourceVisual is Button
+                || sourceVisual is CheckBox
+                || sourceVisual is TextBox
+                || sourceVisual.FindAncestorOfType<Button>() is not null
+                || sourceVisual.FindAncestorOfType<CheckBox>() is not null
+                || sourceVisual.FindAncestorOfType<TextBox>() is not null))
+        {
+            return;
+        }
+
+        viewModel.StartRenameTodoCommand.Execute(todo);
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            var renameTextBox = row
+                .GetVisualDescendants()
+                .OfType<TextBox>()
+                .FirstOrDefault(control => control.IsVisible);
+
+            if (renameTextBox is null)
+            {
+                return;
+            }
+
+            renameTextBox.Focus();
+            renameTextBox.SelectAll();
+        }, DispatcherPriority.Input);
+
+        e.Handled = true;
+    }
+
+    private void TodoRenameTextBox_OnLostFocus(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel
+            || sender is not Control control
+            || control.DataContext is not TodoItemViewModel todo)
+        {
+            return;
+        }
+
+        viewModel.CommitRenameTodoCommand.Execute(todo);
     }
 }

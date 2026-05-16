@@ -93,6 +93,27 @@ public sealed class SqliteTodoRepository : ITodoRepository
         return Convert.ToInt64(result);
     }
 
+    public void Rename(long id, string title)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            throw new ArgumentException("Todo title cannot be empty.", nameof(title));
+        }
+
+        using var connection = OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            UPDATE Todos
+            SET Title = $title
+            WHERE Id = $id;
+            """;
+
+        command.Parameters.AddWithValue("$id", id);
+        command.Parameters.AddWithValue("$title", title.Trim());
+        command.ExecuteNonQuery();
+    }
+
     public void SetCompleted(long id, bool isCompleted)
     {
         using var connection = OpenConnection();

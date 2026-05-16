@@ -23,7 +23,15 @@ public sealed partial class TodoItemViewModel : ObservableObject
     [ObservableProperty]
     private bool isRejected;
 
+    [ObservableProperty]
+    private bool isRenaming;
+
+    [ObservableProperty]
+    private string renameText;
+
     public bool CanReject => !IsRejected;
+
+    public bool IsNotRenaming => !IsRenaming;
 
     public TodoItemViewModel(
         long id,
@@ -39,6 +47,7 @@ public sealed partial class TodoItemViewModel : ObservableObject
         this.title = title;
         this.isCompleted = isCompleted;
         this.isRejected = isRejected;
+        renameText = title;
     }
 
     public static TodoItemViewModel From(TodoItem todo)
@@ -55,5 +64,30 @@ public sealed partial class TodoItemViewModel : ObservableObject
     partial void OnIsRejectedChanged(bool value)
     {
         OnPropertyChanged(nameof(CanReject));
+    }
+
+    partial void OnIsRenamingChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsNotRenaming));
+    }
+
+    partial void OnTitleChanged(string value)
+    {
+        if (!IsRenaming)
+        {
+            RenameText = value;
+        }
+    }
+
+    public void BeginRename()
+    {
+        RenameText = Title;
+        IsRenaming = true;
+    }
+
+    public void CancelRename()
+    {
+        RenameText = Title;
+        IsRenaming = false;
     }
 }

@@ -190,6 +190,59 @@ public partial class MainWindowViewModel : ViewModelBase
         LoadTodos();
     }
 
+    [RelayCommand]
+    private void StartRenameTodo(TodoItemViewModel? todo)
+    {
+        if (todo is null)
+        {
+            return;
+        }
+
+        foreach (var item in _allTodos)
+        {
+            if (!ReferenceEquals(item, todo) && item.IsRenaming)
+            {
+                item.CancelRename();
+            }
+        }
+
+        todo.BeginRename();
+    }
+
+    [RelayCommand]
+    private void CommitRenameTodo(TodoItemViewModel? todo)
+    {
+        if (todo is null || !todo.IsRenaming)
+        {
+            return;
+        }
+
+        var renamedTitle = (todo.RenameText ?? string.Empty).Trim();
+
+        if (string.IsNullOrWhiteSpace(renamedTitle))
+        {
+            todo.CancelRename();
+            return;
+        }
+
+        if (string.Equals(renamedTitle, todo.Title, StringComparison.Ordinal))
+        {
+            todo.CancelRename();
+            return;
+        }
+
+        _todoRepository.Rename(todo.Id, renamedTitle);
+        todo.Title = renamedTitle;
+        todo.CancelRename();
+        ApplyFilter();
+    }
+
+    [RelayCommand]
+    private void CancelRenameTodo(TodoItemViewModel? todo)
+    {
+        todo?.CancelRename();
+    }
+
     private void LoadTodos()
     {
         _allTodos.Clear();

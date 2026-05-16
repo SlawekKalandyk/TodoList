@@ -20,6 +20,7 @@ Avalonia desktop todo app designed as a right-side panel opened from the system 
 	- Priority on each todo: Minor, Normal (default), Major, Critical
 	- Enter-to-add and Add button
 	- Todo list body with complete and delete actions
+	- Double-click todo title to rename inline (Enter to save, Escape to cancel)
 	- Reject action for items that no longer matter (excluded from todo/completed)
 	- Filters: separate status and priority dropdowns
 	- Optional grouping by added day or priority
