@@ -15,6 +15,8 @@ public interface ITodoRepository
 
     void Reject(long id);
 
+    void Restore(long id);
+
     void Delete(long id);
 
     int DeleteCompleted();

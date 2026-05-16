@@ -154,6 +154,22 @@ public sealed class SqliteTodoRepository : ITodoRepository
         command.ExecuteNonQuery();
     }
 
+    public void Restore(long id)
+    {
+        using var connection = OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            UPDATE Todos
+            SET IsRejected = 0,
+                IsCompleted = 0,
+                CompletedAtUtc = NULL
+            WHERE Id = $id;
+            """;
+        command.Parameters.AddWithValue("$id", id);
+        command.ExecuteNonQuery();
+    }
+
     public void Delete(long id)
     {
         using var connection = OpenConnection();

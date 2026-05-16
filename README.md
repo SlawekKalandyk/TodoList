@@ -22,6 +22,7 @@ Avalonia desktop todo app designed as a right-side panel opened from the system 
 	- Todo list body with complete and delete actions
 	- Double-click todo title to rename inline (Enter to save, Escape to cancel)
 	- Reject action for items that no longer matter (excluded from todo/completed)
+	- Restore action for rejected todos to move them back to Active
 	- Filters: separate status and priority dropdowns
 	- Optional grouping by added day or priority
 	- Summary counts for active, completed, and rejected

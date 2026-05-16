@@ -160,6 +160,12 @@
                                                 Content="Reject"
                                                 Command="{Binding #RootWindow.DataContext.RejectTodoCommand}"
                                                 CommandParameter="{Binding}" />
+                                        <Button Grid.Column="2"
+                                            VerticalAlignment="Top"
+                                            IsVisible="{Binding IsRejected}"
+                                            Content="Restore"
+                                            Command="{Binding #RootWindow.DataContext.RestoreTodoCommand}"
+                                            CommandParameter="{Binding}" />
                                     </Grid>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
@@ -213,6 +219,12 @@
                                                                     IsVisible="{Binding CanReject}"
                                                                     Content="Reject"
                                                                     Command="{Binding #RootWindow.DataContext.RejectTodoCommand}"
+                                                                    CommandParameter="{Binding}" />
+                                                                <Button Grid.Column="2"
+                                                                    VerticalAlignment="Top"
+                                                                    IsVisible="{Binding IsRejected}"
+                                                                    Content="Restore"
+                                                                    Command="{Binding #RootWindow.DataContext.RestoreTodoCommand}"
                                                                     CommandParameter="{Binding}" />
                                                         </Grid>
                                                     </DataTemplate>

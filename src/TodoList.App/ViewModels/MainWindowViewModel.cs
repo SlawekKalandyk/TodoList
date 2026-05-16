@@ -191,6 +191,18 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void RestoreTodo(TodoItemViewModel? todo)
+    {
+        if (todo is null)
+        {
+            return;
+        }
+
+        _todoRepository.Restore(todo.Id);
+        LoadTodos();
+    }
+
+    [RelayCommand]
     private void StartRenameTodo(TodoItemViewModel? todo)
     {
         if (todo is null)
