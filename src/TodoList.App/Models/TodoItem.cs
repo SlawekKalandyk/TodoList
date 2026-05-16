@@ -10,6 +10,8 @@ public sealed class TodoItem
 
     public bool IsCompleted { get; init; }
 
+    public bool IsRejected { get; init; }
+
     public DateTimeOffset CreatedAtUtc { get; init; }
 
     public DateTimeOffset? CompletedAtUtc { get; init; }

@@ -19,6 +19,7 @@ Avalonia desktop todo app designed as a right-side panel opened from the system 
 	- Quick add textbox at the top
 	- Enter-to-add and Add button
 	- Todo list body with complete and delete actions
+	- Reject action for items that no longer matter (excluded from todo/completed)
 	- Filters: Active, Completed, All
 	- Clear completed action
 	- Summary counts

@@ -99,6 +99,18 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void RejectTodo(TodoItemViewModel? todo)
+    {
+        if (todo is null)
+        {
+            return;
+        }
+
+        _todoRepository.Reject(todo.Id);
+        LoadTodos();
+    }
+
+    [RelayCommand]
     private void ClearCompleted()
     {
         _todoRepository.DeleteCompleted();

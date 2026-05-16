@@ -40,22 +40,24 @@ public sealed class SqliteTodoRepository : ITodoRepository
         using var command = connection.CreateCommand();
         command.CommandText =
             """
-            SELECT Id, Title, IsCompleted, CreatedAtUtc, CompletedAtUtc
+            SELECT Id, Title, IsCompleted, IsRejected, CreatedAtUtc, CompletedAtUtc
             FROM Todos
+            WHERE IsRejected = 0
             ORDER BY IsCompleted ASC, CreatedAtUtc DESC, Id DESC;
             """;
 
         using var reader = command.ExecuteReader();
         while (reader.Read())
         {
-            var completedAtUnix = reader.IsDBNull(4) ? (long?)null : reader.GetInt64(4);
+            var completedAtUnix = reader.IsDBNull(5) ? (long?)null : reader.GetInt64(5);
 
             todos.Add(new TodoItem
             {
                 Id = reader.GetInt64(0),
                 Title = reader.GetString(1),
                 IsCompleted = reader.GetInt64(2) == 1,
-                CreatedAtUtc = DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(3)),
+                IsRejected = reader.GetInt64(3) == 1,
+                CreatedAtUtc = DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(4)),
                 CompletedAtUtc = completedAtUnix.HasValue
                     ? DateTimeOffset.FromUnixTimeSeconds(completedAtUnix.Value)
                     : null,
@@ -78,8 +80,8 @@ public sealed class SqliteTodoRepository : ITodoRepository
         using var command = connection.CreateCommand();
         command.CommandText =
             """
-            INSERT INTO Todos (Title, IsCompleted, CreatedAtUtc, CompletedAtUtc)
-            VALUES ($title, 0, $createdAtUtc, NULL);
+            INSERT INTO Todos (Title, IsCompleted, IsRejected, CreatedAtUtc, CompletedAtUtc)
+            VALUES ($title, 0, 0, $createdAtUtc, NULL);
             SELECT last_insert_rowid();
             """;
 
@@ -99,7 +101,8 @@ public sealed class SqliteTodoRepository : ITodoRepository
             UPDATE Todos
             SET IsCompleted = $isCompleted,
                 CompletedAtUtc = CASE WHEN $isCompleted = 1 THEN $completedAtUtc ELSE NULL END
-            WHERE Id = $id;
+            WHERE Id = $id
+              AND IsRejected = 0;
             """;
 
         command.Parameters.AddWithValue("$id", id);
@@ -110,6 +113,22 @@ public sealed class SqliteTodoRepository : ITodoRepository
                 ? DateTimeOffset.UtcNow.ToUnixTimeSeconds()
                 : DBNull.Value);
 
+        command.ExecuteNonQuery();
+    }
+
+    public void Reject(long id)
+    {
+        using var connection = OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            UPDATE Todos
+            SET IsRejected = 1,
+                IsCompleted = 0,
+                CompletedAtUtc = NULL
+            WHERE Id = $id;
+            """;
+        command.Parameters.AddWithValue("$id", id);
         command.ExecuteNonQuery();
     }
 
@@ -126,7 +145,7 @@ public sealed class SqliteTodoRepository : ITodoRepository
     {
         using var connection = OpenConnection();
         using var command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM Todos WHERE IsCompleted = 1;";
+        command.CommandText = "DELETE FROM Todos WHERE IsCompleted = 1 AND IsRejected = 0;";
         return command.ExecuteNonQuery();
     }
 
@@ -141,15 +160,25 @@ public sealed class SqliteTodoRepository : ITodoRepository
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 Title TEXT NOT NULL,
                 IsCompleted INTEGER NOT NULL DEFAULT 0,
+                IsRejected INTEGER NOT NULL DEFAULT 0,
                 CreatedAtUtc INTEGER NOT NULL,
                 CompletedAtUtc INTEGER NULL
             );
+
+            CREATE INDEX IF NOT EXISTS IX_Todos_IsRejected_IsCompleted_CreatedAtUtc
+                ON Todos (IsRejected, IsCompleted, CreatedAtUtc DESC);
 
             CREATE INDEX IF NOT EXISTS IX_Todos_IsCompleted_CreatedAtUtc
                 ON Todos (IsCompleted, CreatedAtUtc DESC);
             """;
 
         command.ExecuteNonQuery();
+
+        EnsureColumnExists(
+            connection,
+            tableName: "Todos",
+            columnName: "IsRejected",
+            alterStatement: "ALTER TABLE Todos ADD COLUMN IsRejected INTEGER NOT NULL DEFAULT 0;");
     }
 
     private SqliteConnection OpenConnection()
@@ -157,5 +186,38 @@ public sealed class SqliteTodoRepository : ITodoRepository
         var connection = new SqliteConnection(_connectionString);
         connection.Open();
         return connection;
+    }
+
+    private static void EnsureColumnExists(
+        SqliteConnection connection,
+        string tableName,
+        string columnName,
+        string alterStatement)
+    {
+        if (ColumnExists(connection, tableName, columnName))
+        {
+            return;
+        }
+
+        using var alter = connection.CreateCommand();
+        alter.CommandText = alterStatement;
+        alter.ExecuteNonQuery();
+    }
+
+    private static bool ColumnExists(SqliteConnection connection, string tableName, string columnName)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = $"PRAGMA table_info({tableName});";
+
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            if (string.Equals(reader.GetString(1), columnName, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

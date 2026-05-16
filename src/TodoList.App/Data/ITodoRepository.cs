@@ -11,6 +11,8 @@ public interface ITodoRepository
 
     void SetCompleted(long id, bool isCompleted);
 
+    void Reject(long id);
+
     void Delete(long id);
 
     int DeleteCompleted();
