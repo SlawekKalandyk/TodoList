@@ -49,6 +49,10 @@ The SQLite file is created at:
 
 `%LOCALAPPDATA%/TodoListPanel/todos.sqlite`
 
+The UI settings file is created next to it:
+
+`%LOCALAPPDATA%/TodoListPanel/settings.json`
+
 ## Notes for Linux Port
 
 The core architecture is already portable because it uses Avalonia and SQLite. For Linux, the app should work with minor behavior differences in tray and topmost window handling depending on desktop environment and Wayland/X11 rules.

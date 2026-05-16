@@ -8,6 +8,7 @@ using System;
 using System.IO;
 using System.Linq;
 using TodoList.App.Data;
+using TodoList.App.Models;
 using TodoList.App.ViewModels;
 using TodoList.App.Views;
 
@@ -33,14 +34,26 @@ public partial class App : Application
 
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
-            var databasePath = BuildDatabasePath();
+            var dataDirectory = BuildDataDirectory();
+            var databasePath = Path.Combine(dataDirectory, "todos.sqlite");
+            var settingsPath = Path.Combine(dataDirectory, "settings.json");
+
             var todoRepository = new SqliteTodoRepository(databasePath);
+            var settingsStore = new JsonAppSettingsStore(settingsPath);
             var mainWindowViewModel = new MainWindowViewModel(todoRepository);
+            var appSettings = SanitizeSettings(settingsStore.Load(), mainWindowViewModel);
 
             _mainWindow = new MainWindow
             {
                 DataContext = mainWindowViewModel,
+                WidthPercent = appSettings.WidthPercent,
             };
+
+            mainWindowViewModel.IsPinned = appSettings.IsPinned;
+            mainWindowViewModel.SelectedFilter = appSettings.SelectedFilter;
+            mainWindowViewModel.SelectedGroupingOption = appSettings.SelectedGroupingOption;
+
+            WireSettingsPersistence(_mainWindow, mainWindowViewModel, settingsStore, desktop);
 
             _mainWindow.Closing += MainWindow_OnClosing;
             desktop.MainWindow = _mainWindow;
@@ -52,7 +65,7 @@ public partial class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    private static string BuildDatabasePath()
+    private static string BuildDataDirectory()
     {
         var dataDirectory = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -60,7 +73,79 @@ public partial class App : Application
 
         Directory.CreateDirectory(dataDirectory);
 
-        return Path.Combine(dataDirectory, "todos.sqlite");
+        return dataDirectory;
+    }
+
+    private static AppUiSettings SanitizeSettings(
+        AppUiSettings settings,
+        MainWindowViewModel viewModel)
+    {
+        var defaultGroupingOption = viewModel.AvailableGroupingOptions.FirstOrDefault() ?? "None";
+        var groupingOption = settings.SelectedGroupingOption;
+
+        if (string.IsNullOrWhiteSpace(groupingOption)
+            || !viewModel.AvailableGroupingOptions.Contains(groupingOption))
+        {
+            groupingOption = defaultGroupingOption;
+        }
+
+        return new AppUiSettings
+        {
+            WidthPercent = Math.Clamp(settings.WidthPercent, 50m, 200m),
+            IsPinned = settings.IsPinned,
+            SelectedFilter = Enum.IsDefined(typeof(TodoFilter), settings.SelectedFilter)
+                ? settings.SelectedFilter
+                : TodoFilter.Active,
+            SelectedGroupingOption = groupingOption,
+        };
+    }
+
+    private static AppUiSettings BuildCurrentSettingsSnapshot(
+        MainWindow mainWindow,
+        MainWindowViewModel viewModel)
+    {
+        return new AppUiSettings
+        {
+            WidthPercent = Math.Clamp(mainWindow.WidthPercent, 50m, 200m),
+            IsPinned = viewModel.IsPinned,
+            SelectedFilter = viewModel.SelectedFilter,
+            SelectedGroupingOption = viewModel.SelectedGroupingOption,
+        };
+    }
+
+    private static void WireSettingsPersistence(
+        MainWindow mainWindow,
+        MainWindowViewModel viewModel,
+        JsonAppSettingsStore settingsStore,
+        IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        void SaveCurrentSettings()
+        {
+            settingsStore.Save(BuildCurrentSettingsSnapshot(mainWindow, viewModel));
+        }
+
+        mainWindow.PropertyChanged += (_, e) =>
+        {
+            if (e.Property == MainWindow.WidthPercentProperty)
+            {
+                SaveCurrentSettings();
+            }
+        };
+
+        viewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(MainWindowViewModel.IsPinned)
+                or nameof(MainWindowViewModel.SelectedFilter)
+                or nameof(MainWindowViewModel.SelectedGroupingOption))
+            {
+                SaveCurrentSettings();
+            }
+        };
+
+        desktop.Exit += (_, _) => SaveCurrentSettings();
+
+        // Ensure defaults or sanitized values are written even before first user interaction.
+        SaveCurrentSettings();
     }
 
     private void TrayIcon_OnClicked(object? sender, EventArgs e)
