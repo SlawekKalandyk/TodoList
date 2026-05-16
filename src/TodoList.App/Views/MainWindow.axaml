@@ -28,6 +28,15 @@
             <Setter Property="BorderBrush" Value="#4C5460" />
         </Style>
 
+        <Style Selector="ListBox.todoListContent">
+            <Setter Property="Background" Value="#2B2B2B" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+
+        <Style Selector="ScrollViewer.todoListContent">
+            <Setter Property="Background" Value="#2B2B2B" />
+        </Style>
+
         <Style Selector="TextBlock.summaryText">
             <Setter Property="Foreground" Value="#C4CAD3" />
         </Style>
@@ -77,41 +86,87 @@
                     <ComboBox Grid.Column="1"
                               ItemsSource="{Binding AvailableFilters}"
                               SelectedItem="{Binding SelectedFilter}" />
-                    <Button Grid.Column="2"
-                            Content="Clear completed"
-                            Command="{Binding ClearCompletedCommand}" />
+                    <ComboBox Grid.Column="2"
+                              MinWidth="140"
+                              ItemsSource="{Binding AvailableGroupingOptions}"
+                              SelectedItem="{Binding SelectedGroupingOption}" />
                 </Grid>
 
                 <Border Grid.Row="1" Classes="todoListSurface" CornerRadius="8" BorderThickness="1">
-                    <ListBox ItemsSource="{Binding VisibleTodos}" Padding="6">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:TodoItemViewModel">
-                                <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8" Margin="4">
-                                    <CheckBox Grid.Column="0"
-                                              VerticalAlignment="Top"
-                                              Margin="0,2,0,0"
-                                              IsChecked="{Binding IsCompleted}"
-                                              Command="{Binding #RootWindow.DataContext.ToggleCompletedCommand}"
-                                              CommandParameter="{Binding}" />
-                                    <TextBlock Grid.Column="1"
-                                               Text="{Binding Title}"
-                                               VerticalAlignment="Center"
-                                               TextWrapping="Wrap" />
-                                    <Button Grid.Column="2"
-                                            VerticalAlignment="Top"
-                                            IsVisible="{Binding CanReject}"
-                                            Content="Reject"
-                                            Command="{Binding #RootWindow.DataContext.RejectTodoCommand}"
-                                            CommandParameter="{Binding}" />
-                                    <Button Grid.Column="3"
-                                            VerticalAlignment="Top"
-                                            Content="Delete"
-                                            Command="{Binding #RootWindow.DataContext.DeleteTodoCommand}"
-                                            CommandParameter="{Binding}" />
-                                </Grid>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
+                    <Grid RowDefinitions="*">
+                        <ListBox Classes="todoListContent" IsVisible="{Binding ShowFlatList}" ItemsSource="{Binding VisibleTodos}" Padding="6">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:TodoItemViewModel">
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8" Margin="4">
+                                        <CheckBox Grid.Column="0"
+                                                  VerticalAlignment="Top"
+                                                  Margin="0,2,0,0"
+                                                  IsChecked="{Binding IsCompleted}"
+                                                  Command="{Binding #RootWindow.DataContext.ToggleCompletedCommand}"
+                                                  CommandParameter="{Binding}" />
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding Title}"
+                                                   VerticalAlignment="Center"
+                                                   TextWrapping="Wrap" />
+                                        <Button Grid.Column="2"
+                                                VerticalAlignment="Top"
+                                                IsVisible="{Binding CanReject}"
+                                                Content="Reject"
+                                                Command="{Binding #RootWindow.DataContext.RejectTodoCommand}"
+                                                CommandParameter="{Binding}" />
+                                        <Button Grid.Column="3"
+                                                VerticalAlignment="Top"
+                                                Content="Delete"
+                                                Command="{Binding #RootWindow.DataContext.DeleteTodoCommand}"
+                                                CommandParameter="{Binding}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <ScrollViewer Classes="todoListContent" IsVisible="{Binding GroupByDayAdded}" Padding="6">
+                            <ItemsControl ItemsSource="{Binding VisibleTodoGroups}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:TodoDayGroupViewModel">
+                                        <StackPanel Margin="0,0,0,10" Spacing="4">
+                                            <TextBlock Text="{Binding Header}"
+                                                       FontWeight="SemiBold"
+                                                       Margin="4,4,4,2" />
+                                            <ItemsControl ItemsSource="{Binding Items}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:TodoItemViewModel">
+                                                        <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8" Margin="4">
+                                                            <CheckBox Grid.Column="0"
+                                                                      VerticalAlignment="Top"
+                                                                      Margin="0,2,0,0"
+                                                                      IsChecked="{Binding IsCompleted}"
+                                                                      Command="{Binding #RootWindow.DataContext.ToggleCompletedCommand}"
+                                                                      CommandParameter="{Binding}" />
+                                                            <TextBlock Grid.Column="1"
+                                                                       Text="{Binding Title}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextWrapping="Wrap" />
+                                                            <Button Grid.Column="2"
+                                                                    VerticalAlignment="Top"
+                                                                    IsVisible="{Binding CanReject}"
+                                                                    Content="Reject"
+                                                                    Command="{Binding #RootWindow.DataContext.RejectTodoCommand}"
+                                                                    CommandParameter="{Binding}" />
+                                                            <Button Grid.Column="3"
+                                                                    VerticalAlignment="Top"
+                                                                    Content="Delete"
+                                                                    Command="{Binding #RootWindow.DataContext.DeleteTodoCommand}"
+                                                                    CommandParameter="{Binding}" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Grid>
                 </Border>
             </Grid>
 

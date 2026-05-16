@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -10,10 +11,15 @@ namespace TodoList.App.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase
 {
+    private const string NoGroupingOption = "None";
+    private const string GroupByDayAddedOption = "Added day";
+
     private readonly ITodoRepository _todoRepository;
     private readonly List<TodoItemViewModel> _allTodos = new();
 
     public ObservableCollection<TodoItemViewModel> VisibleTodos { get; } = new();
+
+    public ObservableCollection<TodoDayGroupViewModel> VisibleTodoGroups { get; } = new();
 
     public IReadOnlyList<TodoFilter> AvailableFilters { get; } =
     [
@@ -21,6 +27,12 @@ public partial class MainWindowViewModel : ViewModelBase
         TodoFilter.Completed,
         TodoFilter.Rejected,
         TodoFilter.All,
+    ];
+
+    public IReadOnlyList<string> AvailableGroupingOptions { get; } =
+    [
+        NoGroupingOption,
+        GroupByDayAddedOption,
     ];
 
     [ObservableProperty]
@@ -40,6 +52,14 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool isPinned;
+
+    [ObservableProperty]
+    private string selectedGroupingOption = NoGroupingOption;
+
+    public bool GroupByDayAdded =>
+        string.Equals(SelectedGroupingOption, GroupByDayAddedOption, StringComparison.Ordinal);
+
+    public bool ShowFlatList => !GroupByDayAdded;
 
     public string SummaryText =>
         $"{ActiveCount} active - {CompletedCount} completed - {RejectedCount} rejected";
@@ -68,6 +88,12 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnRejectedCountChanged(int value)
     {
         OnPropertyChanged(nameof(SummaryText));
+    }
+
+    partial void OnSelectedGroupingOptionChanged(string value)
+    {
+        OnPropertyChanged(nameof(GroupByDayAdded));
+        OnPropertyChanged(nameof(ShowFlatList));
     }
 
     [RelayCommand]
@@ -126,13 +152,6 @@ public partial class MainWindowViewModel : ViewModelBase
         LoadTodos();
     }
 
-    [RelayCommand]
-    private void ClearCompleted()
-    {
-        _todoRepository.DeleteCompleted();
-        LoadTodos();
-    }
-
     private void LoadTodos()
     {
         _allTodos.Clear();
@@ -158,10 +177,61 @@ public partial class MainWindowViewModel : ViewModelBase
             _ => _allTodos,
         };
 
+        var filteredList = filteredTodos.ToList();
+
         VisibleTodos.Clear();
-        foreach (var todo in filteredTodos)
+        foreach (var todo in filteredList)
         {
             VisibleTodos.Add(todo);
         }
+
+        RebuildDayGroups(filteredList);
+    }
+
+    private void RebuildDayGroups(IReadOnlyList<TodoItemViewModel> todos)
+    {
+        VisibleTodoGroups.Clear();
+
+        var groupedTodos = todos
+            .GroupBy(todo => todo.CreatedAtUtc.ToLocalTime().Date)
+            .OrderByDescending(group => group.Key);
+
+        foreach (var dayGroup in groupedTodos)
+        {
+            var header = BuildDayHeader(dayGroup.Key);
+            VisibleTodoGroups.Add(
+                new TodoDayGroupViewModel(
+                    header,
+                    dayGroup.OrderByDescending(todo => todo.CreatedAtUtc)));
+        }
+    }
+
+    private static string BuildDayHeader(DateTime localDate)
+    {
+        var today = DateTime.Now.Date;
+        if (localDate == today)
+        {
+            return "Today";
+        }
+
+        if (localDate == today.AddDays(-1))
+        {
+            return "Yesterday";
+        }
+
+        return localDate.ToString("dddd, dd MMM yyyy");
+    }
+}
+
+public sealed class TodoDayGroupViewModel
+{
+    public string Header { get; }
+
+    public ObservableCollection<TodoItemViewModel> Items { get; }
+
+    public TodoDayGroupViewModel(string header, IEnumerable<TodoItemViewModel> items)
+    {
+        Header = header;
+        Items = new ObservableCollection<TodoItemViewModel>(items);
     }
 }
