@@ -7,7 +7,7 @@ namespace TodoList.App.Views;
 
 public partial class MainWindow : Window
 {
-    private const double PanelWidth = 380;
+    private const double PanelWidth = 600;
 
     public MainWindow()
     {
