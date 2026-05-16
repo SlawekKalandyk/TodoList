@@ -82,7 +82,7 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        _todoRepository.SetCompleted(todo.Id, !todo.IsCompleted);
+        _todoRepository.SetCompleted(todo.Id, todo.IsCompleted);
         LoadTodos();
     }
 
