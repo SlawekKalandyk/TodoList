@@ -9,6 +9,7 @@ For product-level context, read [README.md](README.md).
 - App project: [src/TodoList.App/TodoList.App.csproj](src/TodoList.App/TodoList.App.csproj)
 - Stack: Avalonia Desktop + CommunityToolkit.Mvvm + SQLite
 - Runtime target: .NET 8 (`net8.0`)
+- Test status: no automated test project in this repository today
 
 ## Commands Agents Should Use
 From repo root:
@@ -38,9 +39,12 @@ dotnet build src/TodoList.App/TodoList.App.csproj -p:OutDir=e:/Programming/perso
 ## Repo-Specific Rules That Matter
 - Keep MVVM boundaries: UI-only logic in Views, behavior/state in ViewModels, persistence in Data layer.
 - Todo persistence is synchronous today; avoid introducing async patterns unless required by the change.
-- Width percent behavior is tied to base width 600 and allowed range 50-200.
-  - Keep window min/max aligned with this range (300/1200) or right-edge snapping can drift on multi-monitor setups.
+- Width percent behavior is tied to base width 600 and allowed range 80-200.
+  - Keep these values aligned across [src/TodoList.App/Views/MainWindow.axaml](src/TodoList.App/Views/MainWindow.axaml), [src/TodoList.App/Views/MainWindow.axaml.cs](src/TodoList.App/Views/MainWindow.axaml.cs), and [src/TodoList.App/App.axaml.cs](src/TodoList.App/App.axaml.cs).
+  - Keep window min/max aligned with this range (480/1200) or right-edge snapping can drift on multi-monitor setups.
 - Filtering is two-dimensional (status + priority) and uses AND semantics.
+- [src/TodoList.App/Models/TodoFilter.cs](src/TodoList.App/Models/TodoFilter.cs) still contains legacy priority values for settings migration.
+  - Preserve/update normalization in [src/TodoList.App/App.axaml.cs](src/TodoList.App/App.axaml.cs) (`NormalizeLegacyCombinedFilter`) when changing filter enums.
 - Inline rename is double-click-driven; avoid reloading the entire list during rename commit.
   - Use in-place updates + filter reapply pattern from [src/TodoList.App/ViewModels/MainWindowViewModel.cs](src/TodoList.App/ViewModels/MainWindowViewModel.cs).
 
@@ -48,6 +52,7 @@ dotnet build src/TodoList.App/TodoList.App.csproj -p:OutDir=e:/Programming/perso
 - Todo DB path: `%LOCALAPPDATA%/TodoListPanel/todos.sqlite`
 - UI settings path: `%LOCALAPPDATA%/TodoListPanel/settings.json`
 - SQLite schema migration is additive in [src/TodoList.App/Data/SqliteTodoRepository.cs](src/TodoList.App/Data/SqliteTodoRepository.cs) via `EnsureColumnExists`.
+- Legacy combined filter values from older settings are normalized in [src/TodoList.App/App.axaml.cs](src/TodoList.App/App.axaml.cs).
 
 ## Change Checklist For Agents
 When changing todo behavior, validate all touched layers:
@@ -55,5 +60,5 @@ When changing todo behavior, validate all touched layers:
 2. Repository interface + SQLite implementation in [src/TodoList.App/Data](src/TodoList.App/Data)
 3. Command/state wiring in [src/TodoList.App/ViewModels](src/TodoList.App/ViewModels)
 4. XAML bindings and template visibility rules in [src/TodoList.App/Views/MainWindow.axaml](src/TodoList.App/Views/MainWindow.axaml)
-5. Settings load/save/sanitize in [src/TodoList.App/App.axaml.cs](src/TodoList.App/App.axaml.cs) when UI prefs are affected
+5. Settings load/save/sanitize and legacy filter normalization in [src/TodoList.App/App.axaml.cs](src/TodoList.App/App.axaml.cs) when UI prefs or filters are affected
 6. Build verification using one of the commands above
