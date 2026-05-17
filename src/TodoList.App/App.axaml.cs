@@ -53,6 +53,7 @@ public partial class App : Application
             mainWindowViewModel.SelectedFilter = appSettings.SelectedFilter;
             mainWindowViewModel.SelectedPriorityFilter = appSettings.SelectedPriorityFilter;
             mainWindowViewModel.SelectedGroupingOption = appSettings.SelectedGroupingOption;
+            mainWindowViewModel.SelectedOrderingOption = appSettings.SelectedOrderingOption;
 
             WireSettingsPersistence(_mainWindow, mainWindowViewModel, settingsStore, desktop);
 
@@ -83,11 +84,19 @@ public partial class App : Application
     {
         var defaultGroupingOption = viewModel.AvailableGroupingOptions.FirstOrDefault() ?? "None";
         var groupingOption = settings.SelectedGroupingOption;
+        var defaultOrderingOption = viewModel.AvailableOrderingOptions.FirstOrDefault() ?? "None";
+        var orderingOption = settings.SelectedOrderingOption;
 
         if (string.IsNullOrWhiteSpace(groupingOption)
             || !viewModel.AvailableGroupingOptions.Contains(groupingOption))
         {
             groupingOption = defaultGroupingOption;
+        }
+
+        if (string.IsNullOrWhiteSpace(orderingOption)
+            || !viewModel.AvailableOrderingOptions.Contains(orderingOption))
+        {
+            orderingOption = defaultOrderingOption;
         }
 
         var selectedFilter = Enum.IsDefined(typeof(TodoFilter), settings.SelectedFilter)
@@ -109,6 +118,7 @@ public partial class App : Application
             SelectedFilter = selectedFilter,
             SelectedPriorityFilter = selectedPriorityFilter,
             SelectedGroupingOption = groupingOption,
+            SelectedOrderingOption = orderingOption,
         };
     }
 
@@ -123,6 +133,7 @@ public partial class App : Application
             SelectedFilter = viewModel.SelectedFilter,
             SelectedPriorityFilter = viewModel.SelectedPriorityFilter,
             SelectedGroupingOption = viewModel.SelectedGroupingOption,
+            SelectedOrderingOption = viewModel.SelectedOrderingOption,
         };
     }
 
@@ -150,7 +161,8 @@ public partial class App : Application
             if (e.PropertyName is nameof(MainWindowViewModel.IsPinned)
                 or nameof(MainWindowViewModel.SelectedFilter)
                 or nameof(MainWindowViewModel.SelectedPriorityFilter)
-                or nameof(MainWindowViewModel.SelectedGroupingOption))
+                or nameof(MainWindowViewModel.SelectedGroupingOption)
+                or nameof(MainWindowViewModel.SelectedOrderingOption))
             {
                 SaveCurrentSettings();
             }

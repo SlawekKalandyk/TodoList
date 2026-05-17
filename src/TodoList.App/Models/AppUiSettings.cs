@@ -11,4 +11,6 @@ public sealed class AppUiSettings
     public TodoPriorityFilter SelectedPriorityFilter { get; set; } = TodoPriorityFilter.All;
 
     public string SelectedGroupingOption { get; set; } = "None";
+
+    public string SelectedOrderingOption { get; set; } = "None";
 }

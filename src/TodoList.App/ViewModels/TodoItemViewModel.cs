@@ -16,6 +16,13 @@ public sealed partial class TodoItemViewModel : ObservableObject
     public string PriorityLabel => Priority.ToString();
 
     [ObservableProperty]
+    private DateTimeOffset? dueAtUtc;
+
+    public bool HasDueDate => DueAtUtc.HasValue;
+
+    public string DueDateLabel => DueAtUtc?.ToLocalTime().ToString("dd MMM yyyy") ?? string.Empty;
+
+    [ObservableProperty]
     private string title;
 
     [ObservableProperty]
@@ -45,6 +52,7 @@ public sealed partial class TodoItemViewModel : ObservableObject
         string title,
         string notes,
         TodoPriority priority,
+        DateTimeOffset? dueAtUtc,
         bool isCompleted,
         bool isRejected,
         DateTimeOffset createdAtUtc)
@@ -52,6 +60,7 @@ public sealed partial class TodoItemViewModel : ObservableObject
         Id = id;
         CreatedAtUtc = createdAtUtc;
         this.priority = priority;
+        this.dueAtUtc = dueAtUtc;
         this.title = title;
         this.notes = notes ?? string.Empty;
         this.isCompleted = isCompleted;
@@ -66,6 +75,7 @@ public sealed partial class TodoItemViewModel : ObservableObject
             todo.Title,
             todo.Notes,
             todo.Priority,
+            todo.DueAtUtc?.ToLocalTime(),
             todo.IsCompleted,
             todo.IsRejected,
             todo.CreatedAtUtc);
@@ -84,6 +94,12 @@ public sealed partial class TodoItemViewModel : ObservableObject
     partial void OnPriorityChanged(TodoPriority value)
     {
         OnPropertyChanged(nameof(PriorityLabel));
+    }
+
+    partial void OnDueAtUtcChanged(DateTimeOffset? value)
+    {
+        OnPropertyChanged(nameof(HasDueDate));
+        OnPropertyChanged(nameof(DueDateLabel));
     }
 
     partial void OnTitleChanged(string value)

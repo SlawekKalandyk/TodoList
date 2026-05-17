@@ -19,4 +19,6 @@ public sealed class TodoItem
     public DateTimeOffset CreatedAtUtc { get; init; }
 
     public DateTimeOffset? CompletedAtUtc { get; init; }
+
+    public DateTimeOffset? DueAtUtc { get; init; }
 }

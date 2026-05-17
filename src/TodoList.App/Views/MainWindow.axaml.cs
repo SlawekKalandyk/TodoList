@@ -19,10 +19,12 @@ public partial class MainWindow : Window
     private const double BasePanelWidth = 600;
     private const decimal WidthPercentMinimum = 80m;
     private const decimal WidthPercentMaximum = 200m;
+    private static readonly TimeSpan DetailsCollapseSuppressionDuration = TimeSpan.FromMilliseconds(450);
 
     private bool _isTodoPriorityDropDownOpen;
     private TodoPriority? _priorityValueAtDropDownOpen;
     private bool _suppressNextDetailsCollapse;
+    private DateTimeOffset _suppressDetailsCollapseUntilUtc = DateTimeOffset.MinValue;
 
     public static readonly StyledProperty<decimal> WidthPercentProperty =
         AvaloniaProperty.Register<MainWindow, decimal>(nameof(WidthPercent), 100m);
@@ -202,6 +204,7 @@ public partial class MainWindow : Window
                 || sourceVisual.FindAncestorOfType<Button>() is not null
                 || sourceVisual.FindAncestorOfType<CheckBox>() is not null
                 || sourceVisual.FindAncestorOfType<ComboBox>() is not null
+                || IsWithinDatePicker(sourceVisual)
                 || sourceVisual.FindAncestorOfType<TextBox>() is not null))
         {
             return;
@@ -237,6 +240,12 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (ShouldSuppressDetailsCollapse())
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (e.Source is Visual sourceVisual
             && (IsWithinClass(sourceVisual, "todoDetailsPanel")
                 || sourceVisual is Button
@@ -246,6 +255,7 @@ public partial class MainWindow : Window
                 || sourceVisual.FindAncestorOfType<Button>() is not null
                 || sourceVisual.FindAncestorOfType<CheckBox>() is not null
                 || sourceVisual.FindAncestorOfType<ComboBox>() is not null
+                || IsWithinDatePicker(sourceVisual)
                 || sourceVisual.FindAncestorOfType<TextBox>() is not null))
         {
             return;
@@ -283,6 +293,32 @@ public partial class MainWindow : Window
         viewModel.SaveTodoNotesCommand.Execute(todo);
     }
 
+    private void TodoDueDatePicker_OnLostFocus(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel
+            || sender is not Control control
+            || control.DataContext is not TodoItemViewModel todo)
+        {
+            return;
+        }
+
+        viewModel.SaveTodoDueAtUtcCommand.Execute(todo);
+        viewModel.ReapplyOrderingIfNeeded();
+    }
+
+    private void TodoDueDatePicker_OnSelectedDateChanged(object? sender, DatePickerSelectedValueChangedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel
+            || sender is not DatePicker datePicker
+            || datePicker.DataContext is not TodoItemViewModel todo)
+        {
+            return;
+        }
+
+        SuppressDetailsCollapse();
+        viewModel.SaveTodoDueAtUtcCommand.Execute(todo);
+    }
+
     private void TodoPriorityComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel viewModel
@@ -313,9 +349,14 @@ public partial class MainWindow : Window
             : (TodoPriority?)null;
 
         // Suppress the immediate post-close tap only when no actual value change occurred.
-        _suppressNextDetailsCollapse = _priorityValueAtDropDownOpen.HasValue
+        var shouldSuppressDetailsCollapse = _priorityValueAtDropDownOpen.HasValue
             && currentPriority.HasValue
             && _priorityValueAtDropDownOpen.Value == currentPriority.Value;
+
+        if (shouldSuppressDetailsCollapse)
+        {
+            SuppressDetailsCollapse();
+        }
 
         _priorityValueAtDropDownOpen = null;
     }
@@ -336,19 +377,26 @@ public partial class MainWindow : Window
         TryBlurWidthPercentInput(sourceVisual);
 
         var isWithinComboBox = IsWithinComboBox(sourceVisual);
+        var isWithinDatePicker = IsWithinDatePicker(sourceVisual);
+        var isWithinPopupVisual = IsWithinPopupVisual(sourceVisual);
 
         var isWithinTodoUi = IsWithinClass(sourceVisual, "todoDetailsPanel")
             || IsWithinClass(sourceVisual, "todoRow")
-            || isWithinComboBox;
+            || isWithinComboBox
+            || isWithinDatePicker;
 
         if (_isTodoPriorityDropDownOpen && isWithinTodoUi && !isWithinComboBox)
         {
             return;
         }
 
-        if (_suppressNextDetailsCollapse)
+        if (TryToggleTodoDetailsFromFlatListItem(sourceVisual, viewModel))
         {
-            _suppressNextDetailsCollapse = false;
+            return;
+        }
+
+        if (ShouldSuppressDetailsCollapse() && (isWithinTodoUi || isWithinPopupVisual))
+        {
             return;
         }
 
@@ -357,6 +405,7 @@ public partial class MainWindow : Window
             return;
         }
 
+        ClearDetailsCollapseSuppression();
         viewModel.CollapseTodoDetailsCommand.Execute(null);
     }
 
@@ -365,6 +414,11 @@ public partial class MainWindow : Window
         if (e.Source is not Visual sourceVisual)
         {
             return;
+        }
+
+        if (IsWithinDatePicker(sourceVisual))
+        {
+            SuppressDetailsCollapse();
         }
 
         TryCommitWidthPercentInputBeforeFocusChange(sourceVisual);
@@ -475,6 +529,99 @@ public partial class MainWindow : Window
             || sourceVisual is ComboBoxItem
             || sourceVisual.FindAncestorOfType<ComboBox>() is not null
             || sourceVisual.FindAncestorOfType<ComboBoxItem>() is not null;
+    }
+
+    private static bool IsWithinDatePicker(Visual sourceVisual)
+    {
+        Visual? current = sourceVisual;
+
+        while (current is not null)
+        {
+            var typeName = current.GetType().Name;
+            if (typeName.Contains("DatePicker", StringComparison.OrdinalIgnoreCase)
+                || typeName.Contains("Calendar", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            current = current.GetVisualParent();
+        }
+
+        return false;
+    }
+
+    private static bool IsWithinPopupVisual(Visual sourceVisual)
+    {
+        Visual? current = sourceVisual;
+
+        while (current is not null)
+        {
+            var typeName = current.GetType().Name;
+            if (typeName.Contains("Popup", StringComparison.OrdinalIgnoreCase)
+                || typeName.Contains("Flyout", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            current = current.GetVisualParent();
+        }
+
+        return false;
+    }
+
+    private static bool TryToggleTodoDetailsFromFlatListItem(Visual sourceVisual, MainWindowViewModel viewModel)
+    {
+        if (IsWithinInteractiveTodoControl(sourceVisual)
+            || IsWithinClass(sourceVisual, "todoRow")
+            || sourceVisual.FindAncestorOfType<ListBoxItem>() is not ListBoxItem listBoxItem
+            || listBoxItem.DataContext is not TodoItemViewModel todo)
+        {
+            return false;
+        }
+
+        viewModel.ToggleTodoDetailsCommand.Execute(todo);
+        return true;
+    }
+
+    private static bool IsWithinInteractiveTodoControl(Visual sourceVisual)
+    {
+        return sourceVisual is Button
+            || sourceVisual is CheckBox
+            || sourceVisual is ComboBox
+            || sourceVisual is TextBox
+            || IsWithinDatePicker(sourceVisual)
+            || sourceVisual.FindAncestorOfType<Button>() is not null
+            || sourceVisual.FindAncestorOfType<CheckBox>() is not null
+            || sourceVisual.FindAncestorOfType<ComboBox>() is not null
+            || sourceVisual.FindAncestorOfType<TextBox>() is not null;
+    }
+
+    private void SuppressDetailsCollapse()
+    {
+        _suppressNextDetailsCollapse = true;
+
+        var suppressUntilUtc = DateTimeOffset.UtcNow + DetailsCollapseSuppressionDuration;
+        if (suppressUntilUtc > _suppressDetailsCollapseUntilUtc)
+        {
+            _suppressDetailsCollapseUntilUtc = suppressUntilUtc;
+        }
+    }
+
+    private bool ShouldSuppressDetailsCollapse()
+    {
+        if (_suppressNextDetailsCollapse)
+        {
+            _suppressNextDetailsCollapse = false;
+            return true;
+        }
+
+        return DateTimeOffset.UtcNow <= _suppressDetailsCollapseUntilUtc;
+    }
+
+    private void ClearDetailsCollapseSuppression()
+    {
+        _suppressNextDetailsCollapse = false;
+        _suppressDetailsCollapseUntilUtc = DateTimeOffset.MinValue;
     }
 
     private static decimal? TryReadWidthPercentInputTextValue(NumericUpDown? widthInput)

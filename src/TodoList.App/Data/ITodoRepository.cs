@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using TodoList.App.Models;
 
@@ -14,6 +15,8 @@ public interface ITodoRepository
     void UpdateNotes(long id, string notes);
 
     void UpdatePriority(long id, TodoPriority priority);
+
+    void UpdateDueAtUtc(long id, DateTimeOffset? dueAtUtc);
 
     void SetCompleted(long id, bool isCompleted);
 

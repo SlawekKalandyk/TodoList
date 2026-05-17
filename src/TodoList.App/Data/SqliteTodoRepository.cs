@@ -38,7 +38,7 @@ public sealed class SqliteTodoRepository : ITodoRepository
         using var connection = OpenConnection();
         const string sql =
             """
-            SELECT Id, Title, Notes, Priority, IsCompleted, IsRejected, CreatedAtUtc, CompletedAtUtc
+            SELECT Id, Title, Notes, Priority, IsCompleted, IsRejected, CreatedAtUtc, CompletedAtUtc, DueAtUtc
             FROM Todos
             ORDER BY IsRejected ASC, IsCompleted ASC, Priority DESC, CreatedAtUtc DESC, Id DESC;
             """;
@@ -67,8 +67,8 @@ public sealed class SqliteTodoRepository : ITodoRepository
 
         connection.Execute(
             """
-            INSERT INTO Todos (Title, Notes, Priority, IsCompleted, IsRejected, CreatedAtUtc, CompletedAtUtc)
-            VALUES (@title, '', @priority, 0, 0, @createdAtUtc, NULL);
+            INSERT INTO Todos (Title, Notes, Priority, IsCompleted, IsRejected, CreatedAtUtc, CompletedAtUtc, DueAtUtc)
+            VALUES (@title, '', @priority, 0, 0, @createdAtUtc, NULL, NULL);
             """,
             new
             {
@@ -130,6 +130,24 @@ public sealed class SqliteTodoRepository : ITodoRepository
             {
                 id,
                 priority = (int)priority,
+            });
+    }
+
+    public void UpdateDueAtUtc(long id, DateTimeOffset? dueAtUtc)
+    {
+        var dueAtUtcUnix = dueAtUtc?.ToUniversalTime().ToUnixTimeSeconds();
+
+        using var connection = OpenConnection();
+        connection.Execute(
+            """
+            UPDATE Todos
+            SET DueAtUtc = @dueAtUtc
+            WHERE Id = @id;
+            """,
+            new
+            {
+                id,
+                dueAtUtc = dueAtUtcUnix,
             });
     }
 
@@ -210,7 +228,8 @@ public sealed class SqliteTodoRepository : ITodoRepository
                 IsCompleted INTEGER NOT NULL DEFAULT 0,
                 IsRejected INTEGER NOT NULL DEFAULT 0,
                 CreatedAtUtc INTEGER NOT NULL,
-                CompletedAtUtc INTEGER NULL
+                CompletedAtUtc INTEGER NULL,
+                DueAtUtc INTEGER NULL
             );
 
             CREATE INDEX IF NOT EXISTS IX_Todos_IsRejected_IsCompleted_CreatedAtUtc
@@ -237,6 +256,12 @@ public sealed class SqliteTodoRepository : ITodoRepository
             tableName: "Todos",
             columnName: "Notes",
             alterStatement: "ALTER TABLE Todos ADD COLUMN Notes TEXT NOT NULL DEFAULT '';");
+
+        EnsureColumnExists(
+            connection,
+            tableName: "Todos",
+            columnName: "DueAtUtc",
+            alterStatement: "ALTER TABLE Todos ADD COLUMN DueAtUtc INTEGER NULL;");
     }
 
     private static TodoPriority ToPriority(long rawValue)
@@ -262,6 +287,9 @@ public sealed class SqliteTodoRepository : ITodoRepository
             CreatedAtUtc = DateTimeOffset.FromUnixTimeSeconds(row.CreatedAtUtc),
             CompletedAtUtc = row.CompletedAtUtc.HasValue
                 ? DateTimeOffset.FromUnixTimeSeconds(row.CompletedAtUtc.Value)
+                : null,
+            DueAtUtc = row.DueAtUtc.HasValue
+                ? DateTimeOffset.FromUnixTimeSeconds(row.DueAtUtc.Value)
                 : null,
         };
     }
@@ -317,6 +345,8 @@ public sealed class SqliteTodoRepository : ITodoRepository
         public long CreatedAtUtc { get; init; }
 
         public long? CompletedAtUtc { get; init; }
+
+        public long? DueAtUtc { get; init; }
     }
 
     private sealed class TableInfoRow

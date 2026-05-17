@@ -14,6 +14,8 @@ public partial class MainWindowViewModel : ViewModelBase
     private const string NoGroupingOption = "None";
     private const string GroupByDayAddedOption = "Added day";
     private const string GroupByPriorityOption = "Priority";
+    private const string NoOrderingOption = "None";
+    private const string OrderByDueDateOption = "Due date";
 
     private readonly ITodoRepository _todoRepository;
     private readonly List<TodoItemViewModel> _allTodos = new();
@@ -54,6 +56,12 @@ public partial class MainWindowViewModel : ViewModelBase
         GroupByPriorityOption,
     ];
 
+    public IReadOnlyList<string> AvailableOrderingOptions { get; } =
+    [
+        NoOrderingOption,
+        OrderByDueDateOption,
+    ];
+
     [ObservableProperty]
     private string newTodoText = string.Empty;
 
@@ -81,6 +89,9 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private string selectedGroupingOption = NoGroupingOption;
 
+    [ObservableProperty]
+    private string selectedOrderingOption = NoOrderingOption;
+
     public bool GroupByDayAdded =>
         string.Equals(SelectedGroupingOption, GroupByDayAddedOption, StringComparison.Ordinal);
 
@@ -90,6 +101,9 @@ public partial class MainWindowViewModel : ViewModelBase
     public bool ShowFlatList => !GroupByDayAdded && !GroupByPriority;
 
     public bool ShowGroupedList => !ShowFlatList;
+
+    public bool OrderByDueDate =>
+        string.Equals(SelectedOrderingOption, OrderByDueDateOption, StringComparison.Ordinal);
 
     public string SummaryText =>
         $"{ActiveCount} active - {CompletedCount} completed - {RejectedCount} rejected";
@@ -131,6 +145,11 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(GroupByPriority));
         OnPropertyChanged(nameof(ShowFlatList));
         OnPropertyChanged(nameof(ShowGroupedList));
+        ApplyFilter();
+    }
+
+    partial void OnSelectedOrderingOptionChanged(string value)
+    {
         ApplyFilter();
     }
 
@@ -267,6 +286,41 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void SaveTodoDueAtUtc(TodoItemViewModel? todo)
+    {
+        if (todo is null)
+        {
+            return;
+        }
+
+        var normalizedDueAtUtc = todo.DueAtUtc?.ToUniversalTime();
+
+        _todoRepository.UpdateDueAtUtc(todo.Id, normalizedDueAtUtc);
+    }
+
+    [RelayCommand]
+    private void ClearTodoDueAtUtc(TodoItemViewModel? todo)
+    {
+        if (todo is null)
+        {
+            return;
+        }
+
+        if (!todo.DueAtUtc.HasValue)
+        {
+            return;
+        }
+
+        todo.DueAtUtc = null;
+        _todoRepository.UpdateDueAtUtc(todo.Id, null);
+
+        if (OrderByDueDate)
+        {
+            ApplyFilter();
+        }
+    }
+
+    [RelayCommand]
     private void CollapseTodoDetails()
     {
         foreach (var item in _allTodos)
@@ -323,6 +377,14 @@ public partial class MainWindowViewModel : ViewModelBase
         CommitRenameTodo(activeRenameTodo);
     }
 
+    public void ReapplyOrderingIfNeeded()
+    {
+        if (OrderByDueDate)
+        {
+            ApplyFilter();
+        }
+    }
+
     private void LoadTodos()
     {
         _allTodos.Clear();
@@ -357,7 +419,7 @@ public partial class MainWindowViewModel : ViewModelBase
             _ => filteredTodos,
         };
 
-        var filteredList = filteredTodos.ToList();
+        var filteredList = ApplySelectedOrdering(filteredTodos).ToList();
 
         VisibleTodos.Clear();
         foreach (var todo in filteredList)
@@ -431,7 +493,7 @@ public partial class MainWindowViewModel : ViewModelBase
             VisibleTodoGroups.Add(
                 new TodoDayGroupViewModel(
                     header,
-                    dayGroup.OrderByDescending(todo => todo.CreatedAtUtc)));
+                    ApplyOrderingWithinGroup(dayGroup)));
         }
     }
 
@@ -448,8 +510,39 @@ public partial class MainWindowViewModel : ViewModelBase
             VisibleTodoGroups.Add(
                 new TodoDayGroupViewModel(
                     BuildPriorityHeader(priorityGroup.Key),
-                    priorityGroup.OrderByDescending(todo => todo.CreatedAtUtc)));
+                    ApplyOrderingWithinGroup(priorityGroup)));
         }
+    }
+
+    private IEnumerable<TodoItemViewModel> ApplySelectedOrdering(IEnumerable<TodoItemViewModel> todos)
+    {
+        if (!OrderByDueDate)
+        {
+            return todos;
+        }
+
+        return OrderByDueDateThenFallback(todos);
+    }
+
+    private IEnumerable<TodoItemViewModel> ApplyOrderingWithinGroup(IEnumerable<TodoItemViewModel> todos)
+    {
+        if (OrderByDueDate)
+        {
+            return OrderByDueDateThenFallback(todos);
+        }
+
+        return todos
+            .OrderByDescending(todo => todo.CreatedAtUtc)
+            .ThenByDescending(todo => todo.Id);
+    }
+
+    private static IEnumerable<TodoItemViewModel> OrderByDueDateThenFallback(IEnumerable<TodoItemViewModel> todos)
+    {
+        return todos
+            .OrderBy(todo => todo.DueAtUtc.HasValue ? 0 : 1)
+            .ThenBy(todo => todo.DueAtUtc ?? DateTimeOffset.MaxValue)
+            .ThenByDescending(todo => todo.CreatedAtUtc)
+            .ThenByDescending(todo => todo.Id);
     }
 
     private static string BuildDayHeader(DateTime localDate)
