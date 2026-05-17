@@ -230,7 +230,7 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(GroupByPriority));
         OnPropertyChanged(nameof(ShowFlatList));
         OnPropertyChanged(nameof(ShowGroupedList));
-        ApplyFilter();
+        ApplyFilter(rebuildInactiveBranch: true);
     }
 
     partial void OnSelectedOrderingOptionChanged(string value)
@@ -522,7 +522,7 @@ public partial class MainWindowViewModel : ViewModelBase
         ApplyFilter();
     }
 
-    private void ApplyFilter()
+    private void ApplyFilter(bool rebuildInactiveBranch = false)
     {
         var today = DateTime.Now.Date;
         var dueSoonRangeEnd = today.AddDays(7);
@@ -569,13 +569,22 @@ public partial class MainWindowViewModel : ViewModelBase
 
         var filteredList = ApplySelectedOrdering(filteredTodos).ToList();
 
-        VisibleTodos.Clear();
-        foreach (var todo in filteredList)
+        if (ShowFlatList)
         {
-            VisibleTodos.Add(todo);
+            RefreshVisibleTodos(filteredList);
+            if (rebuildInactiveBranch)
+            {
+                RebuildGroupedRows(filteredList);
+            }
+
+            return;
         }
 
         RebuildGroupedRows(filteredList);
+        if (rebuildInactiveBranch)
+        {
+            RefreshVisibleTodos(filteredList);
+        }
     }
 
     private IEnumerable<TodoItemViewModel> ApplyStatusFilter(IEnumerable<TodoItemViewModel> todos)
@@ -646,6 +655,16 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             RebuildPriorityGroupedRows(todos);
             return;
+        }
+    }
+
+    private void RefreshVisibleTodos(IReadOnlyList<TodoItemViewModel> todos)
+    {
+        VisibleTodos.Clear();
+
+        foreach (var todo in todos)
+        {
+            VisibleTodos.Add(todo);
         }
     }
 
