@@ -1,3 +1,4 @@
+using Dapper;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
@@ -34,35 +35,20 @@ public sealed class SqliteTodoRepository : ITodoRepository
 
     public IReadOnlyList<TodoItem> GetAll()
     {
-        var todos = new List<TodoItem>();
-
         using var connection = OpenConnection();
-        using var command = connection.CreateCommand();
-        command.CommandText =
+        const string sql =
             """
             SELECT Id, Title, Notes, Priority, IsCompleted, IsRejected, CreatedAtUtc, CompletedAtUtc
             FROM Todos
             ORDER BY IsRejected ASC, IsCompleted ASC, Priority DESC, CreatedAtUtc DESC, Id DESC;
             """;
 
-        using var reader = command.ExecuteReader();
-        while (reader.Read())
-        {
-            var completedAtUnix = reader.IsDBNull(7) ? (long?)null : reader.GetInt64(7);
+        var rows = connection.Query<TodoRow>(sql);
+        var todos = new List<TodoItem>();
 
-            todos.Add(new TodoItem
-            {
-                Id = reader.GetInt64(0),
-                Title = reader.GetString(1),
-                Notes = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
-                Priority = ToPriority(reader.GetInt64(3)),
-                IsCompleted = reader.GetInt64(4) == 1,
-                IsRejected = reader.GetInt64(5) == 1,
-                CreatedAtUtc = DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(6)),
-                CompletedAtUtc = completedAtUnix.HasValue
-                    ? DateTimeOffset.FromUnixTimeSeconds(completedAtUnix.Value)
-                    : null,
-            });
+        foreach (var row in rows)
+        {
+            todos.Add(MapToTodoItem(row));
         }
 
         return todos;
@@ -78,20 +64,20 @@ public sealed class SqliteTodoRepository : ITodoRepository
         var createdAtUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
         using var connection = OpenConnection();
-        using var command = connection.CreateCommand();
-        command.CommandText =
+
+        connection.Execute(
             """
             INSERT INTO Todos (Title, Notes, Priority, IsCompleted, IsRejected, CreatedAtUtc, CompletedAtUtc)
-            VALUES ($title, '', $priority, 0, 0, $createdAtUtc, NULL);
-            SELECT last_insert_rowid();
-            """;
+            VALUES (@title, '', @priority, 0, 0, @createdAtUtc, NULL);
+            """,
+            new
+            {
+                title = title.Trim(),
+                priority = (int)priority,
+                createdAtUtc = createdAtUnix,
+            });
 
-        command.Parameters.AddWithValue("$title", title.Trim());
-        command.Parameters.AddWithValue("$priority", (int)priority);
-        command.Parameters.AddWithValue("$createdAtUtc", createdAtUnix);
-
-        var result = command.ExecuteScalar();
-        return Convert.ToInt64(result);
+        return connection.QuerySingle<long>("SELECT last_insert_rowid();");
     }
 
     public void Rename(long id, string title)
@@ -102,113 +88,102 @@ public sealed class SqliteTodoRepository : ITodoRepository
         }
 
         using var connection = OpenConnection();
-        using var command = connection.CreateCommand();
-        command.CommandText =
+        connection.Execute(
             """
             UPDATE Todos
-            SET Title = $title
-            WHERE Id = $id;
-            """;
-
-        command.Parameters.AddWithValue("$id", id);
-        command.Parameters.AddWithValue("$title", title.Trim());
-        command.ExecuteNonQuery();
+            SET Title = @title
+            WHERE Id = @id;
+            """,
+            new
+            {
+                id,
+                title = title.Trim(),
+            });
     }
 
     public void UpdateNotes(long id, string notes)
     {
         using var connection = OpenConnection();
-        using var command = connection.CreateCommand();
-        command.CommandText =
+        connection.Execute(
             """
             UPDATE Todos
-            SET Notes = $notes
-            WHERE Id = $id;
-            """;
-
-        command.Parameters.AddWithValue("$id", id);
-        command.Parameters.AddWithValue("$notes", notes ?? string.Empty);
-        command.ExecuteNonQuery();
+            SET Notes = @notes
+            WHERE Id = @id;
+            """,
+            new
+            {
+                id,
+                notes = notes ?? string.Empty,
+            });
     }
 
     public void SetCompleted(long id, bool isCompleted)
     {
+        var completionTimestamp = isCompleted
+            ? DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+            : (long?)null;
+
         using var connection = OpenConnection();
-        using var command = connection.CreateCommand();
-        command.CommandText =
+        connection.Execute(
             """
             UPDATE Todos
-            SET IsCompleted = $isCompleted,
-                CompletedAtUtc = CASE WHEN $isCompleted = 1 THEN $completedAtUtc ELSE NULL END
-            WHERE Id = $id
+            SET IsCompleted = @isCompleted,
+                CompletedAtUtc = CASE WHEN @isCompleted = 1 THEN @completedAtUtc ELSE NULL END
+            WHERE Id = @id
               AND IsRejected = 0;
-            """;
-
-        command.Parameters.AddWithValue("$id", id);
-        command.Parameters.AddWithValue("$isCompleted", isCompleted ? 1 : 0);
-        command.Parameters.AddWithValue(
-            "$completedAtUtc",
-            isCompleted
-                ? DateTimeOffset.UtcNow.ToUnixTimeSeconds()
-                : DBNull.Value);
-
-        command.ExecuteNonQuery();
+            """,
+            new
+            {
+                id,
+                isCompleted = isCompleted ? 1 : 0,
+                completedAtUtc = completionTimestamp,
+            });
     }
 
     public void Reject(long id)
     {
         using var connection = OpenConnection();
-        using var command = connection.CreateCommand();
-        command.CommandText =
+        connection.Execute(
             """
             UPDATE Todos
             SET IsRejected = 1,
                 IsCompleted = 0,
                 CompletedAtUtc = NULL
-            WHERE Id = $id;
-            """;
-        command.Parameters.AddWithValue("$id", id);
-        command.ExecuteNonQuery();
+            WHERE Id = @id;
+            """,
+            new { id });
     }
 
     public void Restore(long id)
     {
         using var connection = OpenConnection();
-        using var command = connection.CreateCommand();
-        command.CommandText =
+        connection.Execute(
             """
             UPDATE Todos
             SET IsRejected = 0,
                 IsCompleted = 0,
                 CompletedAtUtc = NULL
-            WHERE Id = $id;
-            """;
-        command.Parameters.AddWithValue("$id", id);
-        command.ExecuteNonQuery();
+            WHERE Id = @id;
+            """,
+            new { id });
     }
 
     public void Delete(long id)
     {
         using var connection = OpenConnection();
-        using var command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM Todos WHERE Id = $id;";
-        command.Parameters.AddWithValue("$id", id);
-        command.ExecuteNonQuery();
+        connection.Execute("DELETE FROM Todos WHERE Id = @id;", new { id });
     }
 
     public int DeleteCompleted()
     {
         using var connection = OpenConnection();
-        using var command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM Todos WHERE IsCompleted = 1 AND IsRejected = 0;";
-        return command.ExecuteNonQuery();
+        return connection.Execute("DELETE FROM Todos WHERE IsCompleted = 1 AND IsRejected = 0;");
     }
 
     private void EnsureSchema()
     {
         using var connection = OpenConnection();
-        using var command = connection.CreateCommand();
-        command.CommandText =
+        connection.Execute(
             """
             CREATE TABLE IF NOT EXISTS Todos
             (
@@ -227,9 +202,7 @@ public sealed class SqliteTodoRepository : ITodoRepository
 
             CREATE INDEX IF NOT EXISTS IX_Todos_IsCompleted_CreatedAtUtc
                 ON Todos (IsCompleted, CreatedAtUtc DESC);
-            """;
-
-        command.ExecuteNonQuery();
+            """);
 
         EnsureColumnExists(
             connection,
@@ -260,6 +233,23 @@ public sealed class SqliteTodoRepository : ITodoRepository
         return TodoPriority.Normal;
     }
 
+    private static TodoItem MapToTodoItem(TodoRow row)
+    {
+        return new TodoItem
+        {
+            Id = row.Id,
+            Title = row.Title,
+            Notes = row.Notes ?? string.Empty,
+            Priority = ToPriority(row.Priority),
+            IsCompleted = row.IsCompleted == 1,
+            IsRejected = row.IsRejected == 1,
+            CreatedAtUtc = DateTimeOffset.FromUnixTimeSeconds(row.CreatedAtUtc),
+            CompletedAtUtc = row.CompletedAtUtc.HasValue
+                ? DateTimeOffset.FromUnixTimeSeconds(row.CompletedAtUtc.Value)
+                : null,
+        };
+    }
+
     private SqliteConnection OpenConnection()
     {
         var connection = new SqliteConnection(_connectionString);
@@ -278,25 +268,43 @@ public sealed class SqliteTodoRepository : ITodoRepository
             return;
         }
 
-        using var alter = connection.CreateCommand();
-        alter.CommandText = alterStatement;
-        alter.ExecuteNonQuery();
+        connection.Execute(alterStatement);
     }
 
     private static bool ColumnExists(SqliteConnection connection, string tableName, string columnName)
     {
-        using var command = connection.CreateCommand();
-        command.CommandText = $"PRAGMA table_info({tableName});";
-
-        using var reader = command.ExecuteReader();
-        while (reader.Read())
+        foreach (var column in connection.Query<TableInfoRow>($"PRAGMA table_info({tableName});"))
         {
-            if (string.Equals(reader.GetString(1), columnName, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(column.Name, columnName, StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }
         }
 
         return false;
+    }
+
+    private sealed class TodoRow
+    {
+        public long Id { get; init; }
+
+        public string Title { get; init; } = string.Empty;
+
+        public string? Notes { get; init; }
+
+        public long Priority { get; init; }
+
+        public long IsCompleted { get; init; }
+
+        public long IsRejected { get; init; }
+
+        public long CreatedAtUtc { get; init; }
+
+        public long? CompletedAtUtc { get; init; }
+    }
+
+    private sealed class TableInfoRow
+    {
+        public string Name { get; init; } = string.Empty;
     }
 }
