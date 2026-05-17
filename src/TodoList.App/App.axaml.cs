@@ -86,7 +86,7 @@ public partial class App : Application
     {
         var defaultGroupingOption = viewModel.AvailableGroupingOptions.FirstOrDefault() ?? "None";
         var groupingOption = settings.SelectedGroupingOption;
-        var defaultOrderingOption = viewModel.AvailableOrderingOptions.FirstOrDefault() ?? "None";
+        var defaultOrderingOption = viewModel.AvailableOrderingOptions.FirstOrDefault() ?? "Creation date";
         var orderingOption = settings.SelectedOrderingOption;
         var defaultOrderingDirection = viewModel.AvailableOrderingDirections.FirstOrDefault() ?? "Descending";
         var orderingDirection = settings.SelectedOrderingDirection;

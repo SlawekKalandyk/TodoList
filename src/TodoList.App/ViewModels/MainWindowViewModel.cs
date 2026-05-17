@@ -17,7 +17,6 @@ public partial class MainWindowViewModel : ViewModelBase
     private const string GroupByDueDateOption = "Due date";
     private const string GroupByPriorityOption = "Priority";
     private const string NoDueDateGroupHeader = "No due date";
-    private const string NoOrderingOption = "None";
     private const string OrderByDueDateOption = "Due date";
     private const string OrderByCreationDateOption = "Creation date";
     private const string OrderByPriorityOption = "Priority";
@@ -45,8 +44,8 @@ public partial class MainWindowViewModel : ViewModelBase
     [
         new SmartViewOption(TodoSmartView.None, "None"),
         new SmartViewOption(TodoSmartView.Today, "Due today"),
-        new SmartViewOption(TodoSmartView.Overdue, "Overdue"),
         new SmartViewOption(TodoSmartView.DueSoon, "Due soon (7 days)"),
+        new SmartViewOption(TodoSmartView.Overdue, "Overdue"),
     ];
 
     public IReadOnlyList<TodoPriorityFilter> AvailablePriorityFilters { get; } =
@@ -76,9 +75,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public IReadOnlyList<string> AvailableOrderingOptions { get; } =
     [
-        NoOrderingOption,
-        OrderByDueDateOption,
         OrderByCreationDateOption,
+        OrderByDueDateOption,
         OrderByPriorityOption,
     ];
 
@@ -125,7 +123,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private string selectedGroupingOption = NoGroupingOption;
 
     [ObservableProperty]
-    private string selectedOrderingOption = NoOrderingOption;
+    private string selectedOrderingOption = OrderByCreationDateOption;
 
     [ObservableProperty]
     private string selectedOrderingDirection = OrderingDirectionDescendingOption;
@@ -279,7 +277,7 @@ public partial class MainWindowViewModel : ViewModelBase
         SelectedFilter = TodoFilter.Active;
         SelectedPriorityFilter = TodoPriorityFilter.All;
         SelectedGroupingOption = NoGroupingOption;
-        SelectedOrderingOption = NoOrderingOption;
+        SelectedOrderingOption = OrderByCreationDateOption;
         SelectedOrderingDirection = OrderingDirectionDescendingOption;
     }
 
@@ -730,7 +728,7 @@ public partial class MainWindowViewModel : ViewModelBase
             return OrderByPriorityThenFallback(todos, OrderDirectionAscending);
         }
 
-        return todos;
+        return OrderByCreatedAtThenId(todos, ascending: false);
     }
 
     private IEnumerable<TodoItemViewModel> ApplyOrderingWithinGroup(IEnumerable<TodoItemViewModel> todos)
