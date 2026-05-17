@@ -210,7 +210,7 @@
                                                           VerticalAlignment="Top"
                                                           Margin="0,2,0,0"
                                                           IsChecked="{Binding IsCompleted}"
-                                                          Command="{Binding #RootWindow.DataContext.ToggleCompletedCommand}"
+                                                          Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).ToggleCompletedCommand}"
                                                           CommandParameter="{Binding}" />
                                                 <StackPanel Grid.Column="1" Spacing="2">
                                                     <StackPanel IsVisible="{Binding IsNotRenaming}" Spacing="2">
@@ -230,10 +230,10 @@
                                                              LostFocus="TodoRenameTextBox_OnLostFocus">
                                                         <TextBox.KeyBindings>
                                                             <KeyBinding Gesture="Enter"
-                                                                        Command="{Binding #RootWindow.DataContext.CommitRenameTodoCommand}"
+                                                                        Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).CommitRenameTodoCommand}"
                                                                         CommandParameter="{Binding}" />
                                                             <KeyBinding Gesture="Escape"
-                                                                        Command="{Binding #RootWindow.DataContext.CancelRenameTodoCommand}"
+                                                                        Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).CancelRenameTodoCommand}"
                                                                         CommandParameter="{Binding}" />
                                                         </TextBox.KeyBindings>
                                                     </TextBox>
@@ -242,13 +242,13 @@
                                                         VerticalAlignment="Top"
                                                         IsVisible="{Binding CanReject}"
                                                         Content="Reject"
-                                                        Command="{Binding #RootWindow.DataContext.RejectTodoCommand}"
+                                                        Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).RejectTodoCommand}"
                                                         CommandParameter="{Binding}" />
                                                 <Button Grid.Column="2"
                                                         VerticalAlignment="Top"
                                                         IsVisible="{Binding IsRejected}"
                                                         Content="Restore"
-                                                        Command="{Binding #RootWindow.DataContext.RestoreTodoCommand}"
+                                                        Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).RestoreTodoCommand}"
                                                         CommandParameter="{Binding}" />
                                                 <Border Classes="todoDetailsPanel"
                                                         Grid.Row="1"
@@ -265,7 +265,7 @@
                                                                    FontSize="11"
                                                                    Opacity="0.8" />
                                                         <ComboBox MinWidth="132"
-                                                                  ItemsSource="{Binding #RootWindow.DataContext.AvailablePriorities}"
+                                                                  ItemsSource="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).AvailablePriorities}"
                                                                   SelectedItem="{Binding Priority}"
                                                                   DropDownOpened="TodoPriorityComboBox_OnDropDownOpened"
                                                                   DropDownClosed="TodoPriorityComboBox_OnDropDownClosed"
@@ -289,7 +289,7 @@
                                                                     MinHeight="32"
                                                                     Padding="0"
                                                                     ToolTip.Tip="Clear due date"
-                                                                    Command="{Binding #RootWindow.DataContext.ClearTodoDueAtUtcCommand}"
+                                                                    Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).ClearTodoDueAtUtcCommand}"
                                                                     CommandParameter="{Binding}">
                                                                 <Path Width="12"
                                                                       Height="12"
@@ -345,7 +345,7 @@
                                                                           VerticalAlignment="Top"
                                                                           Margin="0,2,0,0"
                                                                           IsChecked="{Binding IsCompleted}"
-                                                                          Command="{Binding #RootWindow.DataContext.ToggleCompletedCommand}"
+                                                                          Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).ToggleCompletedCommand}"
                                                                           CommandParameter="{Binding}" />
                                                                 <StackPanel Grid.Column="1" Spacing="2">
                                                                     <StackPanel IsVisible="{Binding IsNotRenaming}" Spacing="2">
@@ -365,10 +365,10 @@
                                                                              LostFocus="TodoRenameTextBox_OnLostFocus">
                                                                         <TextBox.KeyBindings>
                                                                             <KeyBinding Gesture="Enter"
-                                                                                        Command="{Binding #RootWindow.DataContext.CommitRenameTodoCommand}"
+                                                                                        Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).CommitRenameTodoCommand}"
                                                                                         CommandParameter="{Binding}" />
                                                                             <KeyBinding Gesture="Escape"
-                                                                                        Command="{Binding #RootWindow.DataContext.CancelRenameTodoCommand}"
+                                                                                        Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).CancelRenameTodoCommand}"
                                                                                         CommandParameter="{Binding}" />
                                                                         </TextBox.KeyBindings>
                                                                     </TextBox>
@@ -377,13 +377,13 @@
                                                                         VerticalAlignment="Top"
                                                                         IsVisible="{Binding CanReject}"
                                                                         Content="Reject"
-                                                                        Command="{Binding #RootWindow.DataContext.RejectTodoCommand}"
+                                                                        Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).RejectTodoCommand}"
                                                                         CommandParameter="{Binding}" />
                                                                 <Button Grid.Column="2"
                                                                         VerticalAlignment="Top"
                                                                         IsVisible="{Binding IsRejected}"
                                                                         Content="Restore"
-                                                                        Command="{Binding #RootWindow.DataContext.RestoreTodoCommand}"
+                                                                        Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).RestoreTodoCommand}"
                                                                         CommandParameter="{Binding}" />
                                                                 <Border Classes="todoDetailsPanel"
                                                                         Grid.Row="1"
@@ -400,7 +400,7 @@
                                                                                    FontSize="11"
                                                                                    Opacity="0.8" />
                                                                         <ComboBox MinWidth="132"
-                                                                                  ItemsSource="{Binding #RootWindow.DataContext.AvailablePriorities}"
+                                                                                  ItemsSource="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).AvailablePriorities}"
                                                                                   SelectedItem="{Binding Priority}"
                                                                                   DropDownOpened="TodoPriorityComboBox_OnDropDownOpened"
                                                                                   DropDownClosed="TodoPriorityComboBox_OnDropDownClosed"
@@ -424,7 +424,7 @@
                                                                                     MinHeight="32"
                                                                                     Padding="0"
                                                                                     ToolTip.Tip="Clear due date"
-                                                                                    Command="{Binding #RootWindow.DataContext.ClearTodoDueAtUtcCommand}"
+                                                                                    Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).ClearTodoDueAtUtcCommand}"
                                                                                     CommandParameter="{Binding}">
                                                                                 <Path Width="12"
                                                                                       Height="12"
