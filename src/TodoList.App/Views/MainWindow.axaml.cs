@@ -392,11 +392,6 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (TryToggleTodoDetailsFromFlatListItem(sourceVisual, viewModel))
-        {
-            return;
-        }
-
         if (ShouldSuppressDetailsCollapse() && (isWithinTodoUi || isWithinPopupVisual))
         {
             return;
@@ -582,33 +577,6 @@ public partial class MainWindow : Window
         }
 
         return false;
-    }
-
-    private static bool TryToggleTodoDetailsFromFlatListItem(Visual sourceVisual, MainWindowViewModel viewModel)
-    {
-        if (IsWithinInteractiveTodoControl(sourceVisual)
-            || IsWithinClass(sourceVisual, "todoRow")
-            || sourceVisual.FindAncestorOfType<ListBoxItem>() is not ListBoxItem listBoxItem
-            || listBoxItem.DataContext is not TodoItemViewModel todo)
-        {
-            return false;
-        }
-
-        viewModel.ToggleTodoDetailsCommand.Execute(todo);
-        return true;
-    }
-
-    private static bool IsWithinInteractiveTodoControl(Visual sourceVisual)
-    {
-        return sourceVisual is Button
-            || sourceVisual is CheckBox
-            || sourceVisual is ComboBox
-            || sourceVisual is TextBox
-            || IsWithinDatePicker(sourceVisual)
-            || sourceVisual.FindAncestorOfType<Button>() is not null
-            || sourceVisual.FindAncestorOfType<CheckBox>() is not null
-            || sourceVisual.FindAncestorOfType<ComboBox>() is not null
-            || sourceVisual.FindAncestorOfType<TextBox>() is not null;
     }
 
     private void SuppressDetailsCollapse()
