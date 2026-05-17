@@ -423,12 +423,6 @@ public sealed class SqliteTodoRepository : ITodoRepository
                 CompletedAtUtc INTEGER NULL,
                 DueAtUtc INTEGER NULL
             );
-
-            CREATE INDEX IF NOT EXISTS IX_Todos_IsRejected_IsCompleted_CreatedAtUtc
-                ON Todos (IsRejected, IsCompleted, CreatedAtUtc DESC);
-
-            CREATE INDEX IF NOT EXISTS IX_Todos_IsCompleted_CreatedAtUtc
-                ON Todos (IsCompleted, CreatedAtUtc DESC);
             """);
 
         EnsureColumnExists(
@@ -454,6 +448,32 @@ public sealed class SqliteTodoRepository : ITodoRepository
             tableName: "Todos",
             columnName: "DueAtUtc",
             alterStatement: "ALTER TABLE Todos ADD COLUMN DueAtUtc INTEGER NULL;");
+
+        EnsureIndexes(connection);
+    }
+
+    private static void EnsureIndexes(SqliteConnection connection)
+    {
+        connection.Execute(
+            """
+            CREATE INDEX IF NOT EXISTS IX_Todos_IsRejected_IsCompleted_CreatedAtUtc
+                ON Todos (IsRejected, IsCompleted, CreatedAtUtc DESC);
+
+            CREATE INDEX IF NOT EXISTS IX_Todos_IsCompleted_CreatedAtUtc
+                ON Todos (IsCompleted, CreatedAtUtc DESC);
+
+            CREATE INDEX IF NOT EXISTS IX_Todos_IsRejected_IsCompleted_DueAtUtc_CreatedAtUtc
+                ON Todos (IsRejected, IsCompleted, DueAtUtc, CreatedAtUtc DESC, Id DESC);
+
+            CREATE INDEX IF NOT EXISTS IX_Todos_IsRejected_IsCompleted_Priority_CreatedAtUtc
+                ON Todos (IsRejected, IsCompleted, Priority, CreatedAtUtc DESC, Id DESC);
+
+            CREATE INDEX IF NOT EXISTS IX_Todos_DueAtUtc_CreatedAtUtc
+                ON Todos (DueAtUtc, CreatedAtUtc DESC, Id DESC);
+
+            CREATE INDEX IF NOT EXISTS IX_Todos_Priority_CreatedAtUtc
+                ON Todos (Priority, CreatedAtUtc DESC, Id DESC);
+            """);
     }
 
     private static TodoPriority ToPriority(long rawValue)
