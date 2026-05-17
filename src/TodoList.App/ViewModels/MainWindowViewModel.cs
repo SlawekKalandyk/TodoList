@@ -684,38 +684,34 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void RebuildGroupedRows(IReadOnlyList<TodoItemViewModel> todos)
     {
-        VisibleGroupedRows.Clear();
+        var existingRowsByKey = BuildExistingGroupedRowLookup();
+        var nextRows = new List<TodoGroupedRowViewModel>(Math.Max(VisibleGroupedRows.Count, todos.Count + 8));
 
         if (GroupByDayAdded)
         {
-            RebuildDayGroupedRows(todos);
-            return;
+            RebuildDayGroupedRows(todos, nextRows, existingRowsByKey);
+        }
+        else if (GroupByDueDate)
+        {
+            RebuildDueDateGroupedRows(todos, nextRows, existingRowsByKey);
+        }
+        else if (GroupByPriority)
+        {
+            RebuildPriorityGroupedRows(todos, nextRows, existingRowsByKey);
         }
 
-        if (GroupByDueDate)
-        {
-            RebuildDueDateGroupedRows(todos);
-            return;
-        }
-
-        if (GroupByPriority)
-        {
-            RebuildPriorityGroupedRows(todos);
-            return;
-        }
+        SyncCollectionByReference(VisibleGroupedRows, nextRows);
     }
 
     private void RefreshVisibleTodos(IReadOnlyList<TodoItemViewModel> todos)
     {
-        VisibleTodos.Clear();
-
-        foreach (var todo in todos)
-        {
-            VisibleTodos.Add(todo);
-        }
+        SyncCollectionByReference(VisibleTodos, todos);
     }
 
-    private void RebuildDayGroupedRows(IReadOnlyList<TodoItemViewModel> todos)
+    private void RebuildDayGroupedRows(
+        IReadOnlyList<TodoItemViewModel> todos,
+        ICollection<TodoGroupedRowViewModel> destination,
+        IReadOnlyDictionary<GroupedRowKey, TodoGroupedRowViewModel> existingRowsByKey)
     {
         var groupedTodos = todos
             .GroupBy(todo => todo.CreatedAtUtc.ToLocalTime().Date)
@@ -725,11 +721,16 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             AddGroupedRows(
                 BuildDayHeader(dayGroup.Key),
-                ApplyOrderingWithinGroup(dayGroup));
+                ApplyOrderingWithinGroup(dayGroup),
+                destination,
+                existingRowsByKey);
         }
     }
 
-    private void RebuildPriorityGroupedRows(IReadOnlyList<TodoItemViewModel> todos)
+    private void RebuildPriorityGroupedRows(
+        IReadOnlyList<TodoItemViewModel> todos,
+        ICollection<TodoGroupedRowViewModel> destination,
+        IReadOnlyDictionary<GroupedRowKey, TodoGroupedRowViewModel> existingRowsByKey)
     {
         var groupedTodos = todos
             .GroupBy(todo => todo.Priority)
@@ -739,11 +740,16 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             AddGroupedRows(
                 BuildPriorityHeader(priorityGroup.Key),
-                ApplyOrderingWithinGroup(priorityGroup));
+                ApplyOrderingWithinGroup(priorityGroup),
+                destination,
+                existingRowsByKey);
         }
     }
 
-    private void RebuildDueDateGroupedRows(IReadOnlyList<TodoItemViewModel> todos)
+    private void RebuildDueDateGroupedRows(
+        IReadOnlyList<TodoItemViewModel> todos,
+        ICollection<TodoGroupedRowViewModel> destination,
+        IReadOnlyDictionary<GroupedRowKey, TodoGroupedRowViewModel> existingRowsByKey)
     {
         var groupedTodos = todos.GroupBy(todo => todo.DueAtUtc?.Date);
 
@@ -763,19 +769,167 @@ public partial class MainWindowViewModel : ViewModelBase
 
             AddGroupedRows(
                 header,
-                ApplyOrderingWithinGroup(dueDateGroup));
+                ApplyOrderingWithinGroup(dueDateGroup),
+                destination,
+                existingRowsByKey);
         }
     }
 
     private void AddGroupedRows(
         string header,
-        IEnumerable<TodoItemViewModel> todos)
+        IEnumerable<TodoItemViewModel> todos,
+        ICollection<TodoGroupedRowViewModel> destination,
+        IReadOnlyDictionary<GroupedRowKey, TodoGroupedRowViewModel> existingRowsByKey)
     {
-        VisibleGroupedRows.Add(TodoGroupedRowViewModel.CreateHeader(header));
+        destination.Add(GetOrCreateHeaderRow(header, existingRowsByKey));
 
         foreach (var todo in todos)
         {
-            VisibleGroupedRows.Add(TodoGroupedRowViewModel.CreateTodo(todo));
+            destination.Add(GetOrCreateTodoRow(todo, existingRowsByKey));
+        }
+    }
+
+    private Dictionary<GroupedRowKey, TodoGroupedRowViewModel> BuildExistingGroupedRowLookup()
+    {
+        var lookup = new Dictionary<GroupedRowKey, TodoGroupedRowViewModel>();
+
+        foreach (var row in VisibleGroupedRows)
+        {
+            var key = GetGroupedRowKey(row);
+            if (!lookup.ContainsKey(key))
+            {
+                lookup.Add(key, row);
+            }
+        }
+
+        return lookup;
+    }
+
+    private static GroupedRowKey GetGroupedRowKey(TodoGroupedRowViewModel row)
+    {
+        if (row.IsHeader)
+        {
+            return GroupedRowKey.ForHeader(row.Header);
+        }
+
+        return row.Todo is null
+            ? GroupedRowKey.ForTodo(0)
+            : GroupedRowKey.ForTodo(row.Todo.Id);
+    }
+
+    private static TodoGroupedRowViewModel GetOrCreateHeaderRow(
+        string header,
+        IReadOnlyDictionary<GroupedRowKey, TodoGroupedRowViewModel> existingRowsByKey)
+    {
+        var key = GroupedRowKey.ForHeader(header);
+        if (existingRowsByKey.TryGetValue(key, out var row))
+        {
+            return row;
+        }
+
+        return TodoGroupedRowViewModel.CreateHeader(header);
+    }
+
+    private static TodoGroupedRowViewModel GetOrCreateTodoRow(
+        TodoItemViewModel todo,
+        IReadOnlyDictionary<GroupedRowKey, TodoGroupedRowViewModel> existingRowsByKey)
+    {
+        var key = GroupedRowKey.ForTodo(todo.Id);
+        if (existingRowsByKey.TryGetValue(key, out var row)
+            && row.IsTodo
+            && ReferenceEquals(row.Todo, todo))
+        {
+            return row;
+        }
+
+        return TodoGroupedRowViewModel.CreateTodo(todo);
+    }
+
+    private static void SyncCollectionByReference<TItem>(
+        ObservableCollection<TItem> target,
+        IReadOnlyList<TItem> desired)
+        where TItem : class
+    {
+        if (target.Count == desired.Count)
+        {
+            var sameOrder = true;
+            for (var index = 0; index < desired.Count; index++)
+            {
+                if (!ReferenceEquals(target[index], desired[index]))
+                {
+                    sameOrder = false;
+                    break;
+                }
+            }
+
+            if (sameOrder)
+            {
+                return;
+            }
+        }
+
+        var desiredItems = new HashSet<TItem>(desired);
+
+        for (var index = target.Count - 1; index >= 0; index--)
+        {
+            if (!desiredItems.Contains(target[index]))
+            {
+                target.RemoveAt(index);
+            }
+        }
+
+        for (var index = 0; index < desired.Count; index++)
+        {
+            var desiredItem = desired[index];
+
+            if (index < target.Count && ReferenceEquals(target[index], desiredItem))
+            {
+                continue;
+            }
+
+            var existingIndex = IndexOfReference(target, desiredItem, index + 1);
+            if (existingIndex >= 0)
+            {
+                target.Move(existingIndex, index);
+                continue;
+            }
+
+            target.Insert(index, desiredItem);
+        }
+
+        while (target.Count > desired.Count)
+        {
+            target.RemoveAt(target.Count - 1);
+        }
+    }
+
+    private static int IndexOfReference<TItem>(
+        IList<TItem> items,
+        TItem value,
+        int startIndex)
+        where TItem : class
+    {
+        for (var index = Math.Max(0, startIndex); index < items.Count; index++)
+        {
+            if (ReferenceEquals(items[index], value))
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+
+    private readonly record struct GroupedRowKey(bool IsHeader, string Header, long TodoId)
+    {
+        public static GroupedRowKey ForHeader(string header)
+        {
+            return new GroupedRowKey(true, header, 0);
+        }
+
+        public static GroupedRowKey ForTodo(long todoId)
+        {
+            return new GroupedRowKey(false, string.Empty, todoId);
         }
     }
 
