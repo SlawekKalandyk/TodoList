@@ -51,6 +51,7 @@ public partial class App : Application
 
             mainWindowViewModel.IsPinned = appSettings.IsPinned;
             mainWindowViewModel.SelectedFilter = appSettings.SelectedFilter;
+            mainWindowViewModel.SelectedSmartView = appSettings.SelectedSmartView;
             mainWindowViewModel.SelectedPriorityFilter = appSettings.SelectedPriorityFilter;
             mainWindowViewModel.SelectedGroupingOption = appSettings.SelectedGroupingOption;
             mainWindowViewModel.SelectedOrderingOption = appSettings.SelectedOrderingOption;
@@ -116,6 +117,10 @@ public partial class App : Application
             ? settings.SelectedPriorityFilter
             : TodoPriorityFilter.All;
 
+        var selectedSmartView = Enum.IsDefined(typeof(TodoSmartView), settings.SelectedSmartView)
+            ? settings.SelectedSmartView
+            : TodoSmartView.None;
+
         (selectedFilter, selectedPriorityFilter) = NormalizeLegacyCombinedFilter(
             selectedFilter,
             selectedPriorityFilter);
@@ -125,6 +130,7 @@ public partial class App : Application
             WidthPercent = Math.Clamp(settings.WidthPercent, 80m, 200m),
             IsPinned = settings.IsPinned,
             SelectedFilter = selectedFilter,
+            SelectedSmartView = selectedSmartView,
             SelectedPriorityFilter = selectedPriorityFilter,
             SelectedGroupingOption = groupingOption,
             SelectedOrderingOption = orderingOption,
@@ -141,6 +147,7 @@ public partial class App : Application
             WidthPercent = Math.Clamp(mainWindow.WidthPercent, 80m, 200m),
             IsPinned = viewModel.IsPinned,
             SelectedFilter = viewModel.SelectedFilter,
+            SelectedSmartView = viewModel.SelectedSmartView,
             SelectedPriorityFilter = viewModel.SelectedPriorityFilter,
             SelectedGroupingOption = viewModel.SelectedGroupingOption,
             SelectedOrderingOption = viewModel.SelectedOrderingOption,
@@ -171,6 +178,7 @@ public partial class App : Application
         {
             if (e.PropertyName is nameof(MainWindowViewModel.IsPinned)
                 or nameof(MainWindowViewModel.SelectedFilter)
+                or nameof(MainWindowViewModel.SelectedSmartView)
                 or nameof(MainWindowViewModel.SelectedPriorityFilter)
                 or nameof(MainWindowViewModel.SelectedGroupingOption)
                 or nameof(MainWindowViewModel.SelectedOrderingOption)

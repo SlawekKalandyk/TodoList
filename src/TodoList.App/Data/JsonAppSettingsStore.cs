@@ -36,12 +36,18 @@ public sealed class JsonAppSettingsStore
         try
         {
             var json = File.ReadAllText(_settingsPath);
+            json = NormalizeLegacySmartViewValues(json);
             return JsonSerializer.Deserialize<AppUiSettings>(json, JsonOptions) ?? new AppUiSettings();
         }
         catch
         {
             return new AppUiSettings();
         }
+    }
+
+    private static string NormalizeLegacySmartViewValues(string json)
+    {
+        return json.Replace("\"Upcoming\"", "\"DueSoon\"", StringComparison.Ordinal);
     }
 
     public void Save(AppUiSettings settings)

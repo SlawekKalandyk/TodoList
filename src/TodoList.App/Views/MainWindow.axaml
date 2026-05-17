@@ -125,68 +125,90 @@
 
             <Grid Grid.Row="2" RowDefinitions="Auto,*" RowSpacing="8">
                 <StackPanel Grid.Row="0" Spacing="6">
-                    <Grid ColumnDefinitions="Auto,Auto,*,Auto"
+                      <Grid ColumnDefinitions="Auto,Auto,Auto,*"
                           RowDefinitions="Auto,Auto"
                           ColumnSpacing="8"
                           RowSpacing="4">
                         <TextBlock Grid.Row="0"
                                    Grid.Column="0"
-                                   Grid.ColumnSpan="2"
-                                   Text="Filters"
+                                   Text="Smart View"
                                    FontSize="11"
                                    Opacity="0.85" />
                         <TextBlock Grid.Row="0"
-                                   Grid.Column="3"
-                                   Text="Group By"
+                                   Grid.Column="1"
+                                   Text="Status"
+                                   FontSize="11"
+                                   Opacity="0.85" />
+                        <TextBlock Grid.Row="0"
+                                   Grid.Column="2"
+                                   Text="Priority"
+                                   FontSize="11"
+                                   Opacity="0.85" />
+                        <ComboBox Grid.Row="1"
+                                  Grid.Column="0"
+                                  MinWidth="180"
+                                  ItemsSource="{Binding AvailableSmartViews}"
+                                  SelectedValueBinding="{Binding Value}"
+                                  SelectedValue="{Binding SelectedSmartView}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SmartViewOption">
+                                    <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <ComboBox Grid.Row="1"
+                                  Grid.Column="1"
+                                  MinWidth="100"
+                                  ItemsSource="{Binding AvailableFilters}"
+                                  SelectedItem="{Binding SelectedFilter}"
+                                  IsEnabled="{Binding IsStatusFilterEnabled}" />
+                        <ComboBox Grid.Row="1"
+                                  Grid.Column="2"
+                                  MinWidth="100"
+                                  ItemsSource="{Binding AvailablePriorityFilters}"
+                                  SelectedItem="{Binding SelectedPriorityFilter}" />
+                    </Grid>
+
+                                        <Grid ColumnDefinitions="Auto,Auto,Auto,*"
+                          RowDefinitions="Auto,Auto"
+                          ColumnSpacing="8"
+                          RowSpacing="4">
+                                                <TextBlock Grid.Row="0"
+                                                                     Grid.Column="0"
+                                                                     Text="Group By"
+                                                                     FontSize="11"
+                                                                     Opacity="0.85" />
+                        <TextBlock Grid.Row="0"
+                                                                     Grid.Column="1"
+                                   Text="Order By"
+                                   FontSize="11"
+                                   Opacity="0.85" />
+                        <TextBlock Grid.Row="0"
+                                                                     Grid.Column="2"
+                                   Text="Direction"
                                    FontSize="11"
                                    Opacity="0.85" />
 
-                        <ComboBox Grid.Row="1"
-                                  Grid.Column="0"
-                                  MinWidth="120"
-                                  ItemsSource="{Binding AvailableFilters}"
-                                  SelectedItem="{Binding SelectedFilter}" />
-                        <ComboBox Grid.Row="1"
-                                  Grid.Column="1"
-                                  MinWidth="120"
-                                  ItemsSource="{Binding AvailablePriorityFilters}"
-                                  SelectedItem="{Binding SelectedPriorityFilter}" />
-                        <ComboBox Grid.Row="1"
-                                  Grid.Column="3"
-                                  MinWidth="140"
-                                  MaxWidth="180"
-                                  ItemsSource="{Binding AvailableGroupingOptions}"
-                                  SelectedItem="{Binding SelectedGroupingOption}" />
-                                        </Grid>
-
-                                        <Grid ColumnDefinitions="Auto,Auto,*"
-                                                    RowDefinitions="Auto,Auto"
-                                                    ColumnSpacing="8"
-                                                    RowSpacing="4">
-                                                <TextBlock Grid.Row="0"
-                                                                     Grid.Column="0"
-                                                                     Text="Order By"
-                                                                     FontSize="11"
-                                                                     Opacity="0.85" />
-                                                <TextBlock Grid.Row="0"
-                                                                     Grid.Column="1"
-                                                                     Text="Direction"
-                                                                     FontSize="11"
-                                                                     Opacity="0.85" />
-
                                                 <ComboBox Grid.Row="1"
                                                                     Grid.Column="0"
-                                                                    MinWidth="140"
-                                                                    MaxWidth="180"
-                                                                    ItemsSource="{Binding AvailableOrderingOptions}"
-                                                                    SelectedItem="{Binding SelectedOrderingOption}" />
-                                                <ComboBox Grid.Row="1"
+                                                                    MinWidth="120"
+                                                                    MaxWidth="160"
+                                                                    ItemsSource="{Binding AvailableGroupingOptions}"
+                                                                    SelectedItem="{Binding SelectedGroupingOption}" />
+
+                        <ComboBox Grid.Row="1"
                                                                     Grid.Column="1"
-                                                                    MinWidth="140"
-                                                                    MaxWidth="180"
-                                                                    ItemsSource="{Binding AvailableOrderingDirections}"
-                                                                    SelectedItem="{Binding SelectedOrderingDirection}" />
-                                        </Grid>
+                                  MinWidth="140"
+                                  MaxWidth="180"
+                                  ItemsSource="{Binding AvailableOrderingOptions}"
+                                  SelectedItem="{Binding SelectedOrderingOption}" />
+                        <ComboBox Grid.Row="1"
+                                                                    Grid.Column="2"
+                                  MinWidth="140"
+                                  MaxWidth="180"
+                                  ItemsSource="{Binding AvailableOrderingDirections}"
+                                  SelectedItem="{Binding SelectedOrderingDirection}" />
+                    </Grid>
                 </StackPanel>
 
                 <Border Grid.Row="1" Classes="todoListSurface" CornerRadius="8" BorderThickness="1">

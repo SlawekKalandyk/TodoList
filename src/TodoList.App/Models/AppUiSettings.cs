@@ -8,6 +8,8 @@ public sealed class AppUiSettings
 
     public TodoFilter SelectedFilter { get; set; } = TodoFilter.Active;
 
+    public TodoSmartView SelectedSmartView { get; set; } = TodoSmartView.None;
+
     public TodoPriorityFilter SelectedPriorityFilter { get; set; } = TodoPriorityFilter.All;
 
     public string SelectedGroupingOption { get; set; } = "None";

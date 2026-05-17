@@ -39,6 +39,14 @@ public partial class MainWindowViewModel : ViewModelBase
         TodoFilter.Rejected,
     ];
 
+    public IReadOnlyList<SmartViewOption> AvailableSmartViews { get; } =
+    [
+        new SmartViewOption(TodoSmartView.None, "None"),
+        new SmartViewOption(TodoSmartView.Today, "Due today"),
+        new SmartViewOption(TodoSmartView.Overdue, "Overdue"),
+        new SmartViewOption(TodoSmartView.DueSoon, "Due soon (7 days)"),
+    ];
+
     public IReadOnlyList<TodoPriorityFilter> AvailablePriorityFilters { get; } =
     [
         TodoPriorityFilter.All,
@@ -84,6 +92,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private TodoFilter selectedFilter = TodoFilter.Active;
+
+    [ObservableProperty]
+    private TodoSmartView selectedSmartView = TodoSmartView.None;
 
     [ObservableProperty]
     private TodoPriorityFilter selectedPriorityFilter = TodoPriorityFilter.All;
@@ -134,6 +145,8 @@ public partial class MainWindowViewModel : ViewModelBase
     public string SummaryText =>
         $"{ActiveCount} active - {CompletedCount} completed - {RejectedCount} rejected";
 
+    public bool IsStatusFilterEnabled => SelectedSmartView == TodoSmartView.None;
+
     public MainWindowViewModel(ITodoRepository todoRepository)
     {
         _todoRepository = todoRepository;
@@ -153,6 +166,15 @@ public partial class MainWindowViewModel : ViewModelBase
 
     partial void OnSelectedFilterChanged(TodoFilter value)
     {
+        if (SelectedSmartView == TodoSmartView.None)
+        {
+            ApplyFilter();
+        }
+    }
+
+    partial void OnSelectedSmartViewChanged(TodoSmartView value)
+    {
+        OnPropertyChanged(nameof(IsStatusFilterEnabled));
         ApplyFilter();
     }
 
@@ -462,13 +484,30 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void ApplyFilter()
     {
-        IEnumerable<TodoItemViewModel> filteredTodos = SelectedFilter switch
+        var today = DateTime.Now.Date;
+        var dueSoonRangeEnd = today.AddDays(7);
+
+        IEnumerable<TodoItemViewModel> filteredTodos = SelectedSmartView switch
         {
-            TodoFilter.Active => _allTodos.Where(todo => !todo.IsCompleted && !todo.IsRejected),
-            TodoFilter.Completed => _allTodos.Where(todo => todo.IsCompleted && !todo.IsRejected),
-            TodoFilter.Rejected => _allTodos.Where(todo => todo.IsRejected),
+            TodoSmartView.Today => _allTodos.Where(todo =>
+                IsActive(todo)
+                && todo.DueAtUtc.HasValue
+                && todo.DueAtUtc.Value.Date == today),
+            TodoSmartView.Overdue => _allTodos.Where(todo =>
+                IsActive(todo)
+                && todo.DueAtUtc.HasValue
+                && todo.DueAtUtc.Value.Date < today),
+            TodoSmartView.DueSoon => _allTodos.Where(todo =>
+                IsActive(todo)
+                && todo.DueAtUtc.HasValue
+                && todo.DueAtUtc.Value.Date >= today.AddDays(1)
+                && todo.DueAtUtc.Value.Date <= dueSoonRangeEnd),
             _ => _allTodos,
         };
+
+        filteredTodos = SelectedSmartView == TodoSmartView.None
+            ? ApplyStatusFilter(filteredTodos)
+            : filteredTodos;
 
         filteredTodos = SelectedPriorityFilter switch
         {
@@ -495,6 +534,22 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         RebuildGroups(filteredList);
+    }
+
+    private IEnumerable<TodoItemViewModel> ApplyStatusFilter(IEnumerable<TodoItemViewModel> todos)
+    {
+        return SelectedFilter switch
+        {
+            TodoFilter.Active => todos.Where(todo => !todo.IsCompleted && !todo.IsRejected),
+            TodoFilter.Completed => todos.Where(todo => todo.IsCompleted && !todo.IsRejected),
+            TodoFilter.Rejected => todos.Where(todo => todo.IsRejected),
+            _ => todos,
+        };
+    }
+
+    private static bool IsActive(TodoItemViewModel todo)
+    {
+        return !todo.IsCompleted && !todo.IsRejected;
     }
 
     private void SortTodosInDisplayOrder()
@@ -709,5 +764,18 @@ public sealed class TodoDayGroupViewModel
     {
         Header = header;
         Items = new ObservableCollection<TodoItemViewModel>(items);
+    }
+}
+
+public sealed class SmartViewOption
+{
+    public TodoSmartView Value { get; }
+
+    public string Label { get; }
+
+    public SmartViewOption(TodoSmartView value, string label)
+    {
+        Value = value;
+        Label = label;
     }
 }
