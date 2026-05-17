@@ -10,7 +10,8 @@ public sealed partial class TodoItemViewModel : ObservableObject
 
     public DateTimeOffset CreatedAtUtc { get; }
 
-    public TodoPriority Priority { get; }
+    [ObservableProperty]
+    private TodoPriority priority;
 
     public string PriorityLabel => Priority.ToString();
 
@@ -50,7 +51,7 @@ public sealed partial class TodoItemViewModel : ObservableObject
     {
         Id = id;
         CreatedAtUtc = createdAtUtc;
-        Priority = priority;
+        this.priority = priority;
         this.title = title;
         this.notes = notes ?? string.Empty;
         this.isCompleted = isCompleted;
@@ -78,6 +79,11 @@ public sealed partial class TodoItemViewModel : ObservableObject
     partial void OnIsRenamingChanged(bool value)
     {
         OnPropertyChanged(nameof(IsNotRenaming));
+    }
+
+    partial void OnPriorityChanged(TodoPriority value)
+    {
+        OnPropertyChanged(nameof(PriorityLabel));
     }
 
     partial void OnTitleChanged(string value)

@@ -9,6 +9,7 @@ using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using TodoList.App.Models;
 using TodoList.App.ViewModels;
 
 namespace TodoList.App.Views;
@@ -18,6 +19,10 @@ public partial class MainWindow : Window
     private const double BasePanelWidth = 600;
     private const decimal WidthPercentMinimum = 80m;
     private const decimal WidthPercentMaximum = 200m;
+
+    private bool _isTodoPriorityDropDownOpen;
+    private TodoPriority? _priorityValueAtDropDownOpen;
+    private bool _suppressNextDetailsCollapse;
 
     public static readonly StyledProperty<decimal> WidthPercentProperty =
         AvaloniaProperty.Register<MainWindow, decimal>(nameof(WidthPercent), 100m);
@@ -189,11 +194,14 @@ public partial class MainWindow : Window
         }
 
         if (e.Source is Visual sourceVisual
-            && (sourceVisual is Button
+            && (IsWithinClass(sourceVisual, "todoDetailsPanel")
+                || sourceVisual is Button
                 || sourceVisual is CheckBox
+                || sourceVisual is ComboBox
                 || sourceVisual is TextBox
                 || sourceVisual.FindAncestorOfType<Button>() is not null
                 || sourceVisual.FindAncestorOfType<CheckBox>() is not null
+                || sourceVisual.FindAncestorOfType<ComboBox>() is not null
                 || sourceVisual.FindAncestorOfType<TextBox>() is not null))
         {
             return;
@@ -230,11 +238,14 @@ public partial class MainWindow : Window
         }
 
         if (e.Source is Visual sourceVisual
-            && (sourceVisual is Button
+            && (IsWithinClass(sourceVisual, "todoDetailsPanel")
+                || sourceVisual is Button
                 || sourceVisual is CheckBox
+                || sourceVisual is ComboBox
                 || sourceVisual is TextBox
                 || sourceVisual.FindAncestorOfType<Button>() is not null
                 || sourceVisual.FindAncestorOfType<CheckBox>() is not null
+                || sourceVisual.FindAncestorOfType<ComboBox>() is not null
                 || sourceVisual.FindAncestorOfType<TextBox>() is not null))
         {
             return;
@@ -272,6 +283,43 @@ public partial class MainWindow : Window
         viewModel.SaveTodoNotesCommand.Execute(todo);
     }
 
+    private void TodoPriorityComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel
+            || sender is not ComboBox comboBox
+            || (!comboBox.IsDropDownOpen && !comboBox.IsKeyboardFocusWithin)
+            || comboBox.DataContext is not TodoItemViewModel todo)
+        {
+            return;
+        }
+
+        viewModel.SaveTodoPriorityCommand.Execute(todo);
+    }
+
+    private void TodoPriorityComboBox_OnDropDownOpened(object? sender, EventArgs e)
+    {
+        _isTodoPriorityDropDownOpen = true;
+        _priorityValueAtDropDownOpen = sender is ComboBox comboBox && comboBox.SelectedItem is TodoPriority priority
+            ? priority
+            : null;
+    }
+
+    private void TodoPriorityComboBox_OnDropDownClosed(object? sender, EventArgs e)
+    {
+        _isTodoPriorityDropDownOpen = false;
+
+        var currentPriority = sender is ComboBox comboBox && comboBox.SelectedItem is TodoPriority priority
+            ? priority
+            : (TodoPriority?)null;
+
+        // Suppress the immediate post-close tap only when no actual value change occurred.
+        _suppressNextDetailsCollapse = _priorityValueAtDropDownOpen.HasValue
+            && currentPriority.HasValue
+            && _priorityValueAtDropDownOpen.Value == currentPriority.Value;
+
+        _priorityValueAtDropDownOpen = null;
+    }
+
     private void MainWindow_OnTapped(object? sender, TappedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel viewModel
@@ -287,7 +335,24 @@ public partial class MainWindow : Window
 
         TryBlurWidthPercentInput(sourceVisual);
 
-        if (IsWithinClass(sourceVisual, "todoDetailsPanel") || IsWithinClass(sourceVisual, "todoRow"))
+        var isWithinComboBox = IsWithinComboBox(sourceVisual);
+
+        var isWithinTodoUi = IsWithinClass(sourceVisual, "todoDetailsPanel")
+            || IsWithinClass(sourceVisual, "todoRow")
+            || isWithinComboBox;
+
+        if (_isTodoPriorityDropDownOpen && isWithinTodoUi && !isWithinComboBox)
+        {
+            return;
+        }
+
+        if (_suppressNextDetailsCollapse)
+        {
+            _suppressNextDetailsCollapse = false;
+            return;
+        }
+
+        if (isWithinTodoUi)
         {
             return;
         }
@@ -402,6 +467,14 @@ public partial class MainWindow : Window
     private static bool IsWithinNumericUpDown(Visual sourceVisual)
     {
         return sourceVisual is NumericUpDown || sourceVisual.FindAncestorOfType<NumericUpDown>() is not null;
+    }
+
+    private static bool IsWithinComboBox(Visual sourceVisual)
+    {
+        return sourceVisual is ComboBox
+            || sourceVisual is ComboBoxItem
+            || sourceVisual.FindAncestorOfType<ComboBox>() is not null
+            || sourceVisual.FindAncestorOfType<ComboBoxItem>() is not null;
     }
 
     private static decimal? TryReadWidthPercentInputTextValue(NumericUpDown? widthInput)

@@ -254,6 +254,19 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void SaveTodoPriority(TodoItemViewModel? todo)
+    {
+        if (todo is null)
+        {
+            return;
+        }
+
+        _todoRepository.UpdatePriority(todo.Id, todo.Priority);
+        SortTodosInDisplayOrder();
+        ApplyFilter();
+    }
+
+    [RelayCommand]
     private void CollapseTodoDetails()
     {
         foreach (var item in _allTodos)
@@ -353,6 +366,38 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         RebuildGroups(filteredList);
+    }
+
+    private void SortTodosInDisplayOrder()
+    {
+        _allTodos.Sort((left, right) =>
+        {
+            var rejectedOrder = left.IsRejected.CompareTo(right.IsRejected);
+            if (rejectedOrder != 0)
+            {
+                return rejectedOrder;
+            }
+
+            var completedOrder = left.IsCompleted.CompareTo(right.IsCompleted);
+            if (completedOrder != 0)
+            {
+                return completedOrder;
+            }
+
+            var priorityOrder = right.Priority.CompareTo(left.Priority);
+            if (priorityOrder != 0)
+            {
+                return priorityOrder;
+            }
+
+            var createdOrder = right.CreatedAtUtc.CompareTo(left.CreatedAtUtc);
+            if (createdOrder != 0)
+            {
+                return createdOrder;
+            }
+
+            return right.Id.CompareTo(left.Id);
+        });
     }
 
     private void RebuildGroups(IReadOnlyList<TodoItemViewModel> todos)

@@ -117,6 +117,22 @@ public sealed class SqliteTodoRepository : ITodoRepository
             });
     }
 
+    public void UpdatePriority(long id, TodoPriority priority)
+    {
+        using var connection = OpenConnection();
+        connection.Execute(
+            """
+            UPDATE Todos
+            SET Priority = @priority
+            WHERE Id = @id;
+            """,
+            new
+            {
+                id,
+                priority = (int)priority,
+            });
+    }
+
     public void SetCompleted(long id, bool isCompleted)
     {
         var completionTimestamp = isCompleted

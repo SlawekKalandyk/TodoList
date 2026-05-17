@@ -13,6 +13,8 @@ public interface ITodoRepository
 
     void UpdateNotes(long id, string notes);
 
+    void UpdatePriority(long id, TodoPriority priority);
+
     void SetCompleted(long id, bool isCompleted);
 
     void Reject(long id);
