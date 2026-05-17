@@ -43,6 +43,8 @@ public sealed partial class TodoItemViewModel : ObservableObject
     [ObservableProperty]
     private bool isDetailsExpanded;
 
+    public bool CanToggleCompleted => !IsRejected;
+
     public bool CanReject => !IsRejected;
 
     public bool IsNotRenaming => !IsRenaming;
@@ -83,6 +85,7 @@ public sealed partial class TodoItemViewModel : ObservableObject
 
     partial void OnIsRejectedChanged(bool value)
     {
+        OnPropertyChanged(nameof(CanToggleCompleted));
         OnPropertyChanged(nameof(CanReject));
     }
 
