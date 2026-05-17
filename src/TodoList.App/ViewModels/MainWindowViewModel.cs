@@ -297,14 +297,21 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        if (todo.IsRejected)
+        if (!_allTodos.Any(item => item.Id == todo.Id))
         {
             LoadTodos();
             return;
         }
 
+        if (todo.IsRejected)
+        {
+            todo.IsCompleted = false;
+            return;
+        }
+
         _todoRepository.SetCompleted(todo.Id, todo.IsCompleted);
-        LoadTodos();
+        RecalculateSummaryCounts();
+        ApplyFilter();
     }
 
     [RelayCommand]
@@ -316,6 +323,14 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         _todoRepository.Delete(todo.Id);
+
+        if (RemoveTodoFromAllTodos(todo.Id))
+        {
+            RecalculateSummaryCounts();
+            ApplyFilter();
+            return;
+        }
+
         LoadTodos();
     }
 
@@ -327,8 +342,17 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
+        if (!_allTodos.Any(item => item.Id == todo.Id))
+        {
+            LoadTodos();
+            return;
+        }
+
         _todoRepository.Reject(todo.Id);
-        LoadTodos();
+        todo.IsRejected = true;
+        todo.IsCompleted = false;
+        RecalculateSummaryCounts();
+        ApplyFilter();
     }
 
     [RelayCommand]
@@ -339,8 +363,17 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
+        if (!_allTodos.Any(item => item.Id == todo.Id))
+        {
+            LoadTodos();
+            return;
+        }
+
         _todoRepository.Restore(todo.Id);
-        LoadTodos();
+        todo.IsRejected = false;
+        todo.IsCompleted = false;
+        RecalculateSummaryCounts();
+        ApplyFilter();
     }
 
     [RelayCommand]
@@ -513,10 +546,27 @@ public partial class MainWindowViewModel : ViewModelBase
             _allTodos.Add(TodoItemViewModel.From(todo));
         }
 
+        RecalculateSummaryCounts();
+        ApplyFilter();
+    }
+
+    private void RecalculateSummaryCounts()
+    {
         ActiveCount = _allTodos.Count(todo => !todo.IsCompleted && !todo.IsRejected);
         CompletedCount = _allTodos.Count(todo => todo.IsCompleted && !todo.IsRejected);
         RejectedCount = _allTodos.Count(todo => todo.IsRejected);
-        ApplyFilter();
+    }
+
+    private bool RemoveTodoFromAllTodos(long todoId)
+    {
+        var index = _allTodos.FindIndex(todo => todo.Id == todoId);
+        if (index < 0)
+        {
+            return false;
+        }
+
+        _allTodos.RemoveAt(index);
+        return true;
     }
 
     private void ApplyFilter(bool rebuildInactiveBranch = false)
