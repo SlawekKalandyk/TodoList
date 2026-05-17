@@ -19,11 +19,8 @@ public partial class MainWindow : Window
     private const double BasePanelWidth = 600;
     private const decimal WidthPercentMinimum = 80m;
     private const decimal WidthPercentMaximum = 200m;
-    private static readonly TimeSpan DetailsCollapseSuppressionDuration = TimeSpan.FromMilliseconds(450);
 
     private bool _isTodoPriorityDropDownOpen;
-    private bool _suppressNextDetailsCollapse;
-    private DateTimeOffset _suppressDetailsCollapseUntilUtc = DateTimeOffset.MinValue;
 
     public static readonly StyledProperty<decimal> WidthPercentProperty =
         AvaloniaProperty.Register<MainWindow, decimal>(nameof(WidthPercent), 100m);
@@ -274,12 +271,6 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (ShouldSuppressDetailsCollapse())
-        {
-            e.Handled = true;
-            return;
-        }
-
         if (e.Source is Visual sourceVisual
             && (IsWithinClass(sourceVisual, "todoDetailsPanel")
                 || sourceVisual is Button
@@ -349,7 +340,6 @@ public partial class MainWindow : Window
             return;
         }
 
-        SuppressDetailsCollapse();
         viewModel.SaveTodoDueAtUtcCommand.Execute(todo);
     }
 
@@ -374,9 +364,6 @@ public partial class MainWindow : Window
     private void TodoPriorityComboBox_OnDropDownClosed(object? sender, EventArgs e)
     {
         _isTodoPriorityDropDownOpen = false;
-
-        // The click/tap that closes the dropdown should not also collapse the details panel.
-        SuppressDetailsCollapse();
     }
 
     private void MainWindow_OnTapped(object? sender, TappedEventArgs e)
@@ -397,7 +384,6 @@ public partial class MainWindow : Window
 
         var isWithinComboBox = IsWithinComboBox(sourceVisual);
         var isWithinDatePicker = IsWithinDatePicker(sourceVisual);
-        var isWithinPopupVisual = IsWithinPopupVisual(sourceVisual);
         var isWithinDetailsPanelByPosition = IsTapWithinVisibleTodoDetailsPanel(e);
 
         var isWithinTodoUi = IsWithinClass(sourceVisual, "todoDetailsPanel")
@@ -407,16 +393,10 @@ public partial class MainWindow : Window
 
         if (_isTodoPriorityDropDownOpen && !isWithinComboBox)
         {
-            SuppressDetailsCollapse();
             return;
         }
 
         if (isWithinDetailsPanelByPosition)
-        {
-            return;
-        }
-
-        if (ShouldSuppressDetailsCollapse() && (isWithinTodoUi || isWithinPopupVisual))
         {
             return;
         }
@@ -426,7 +406,6 @@ public partial class MainWindow : Window
             return;
         }
 
-        ClearDetailsCollapseSuppression();
         viewModel.CollapseTodoDetailsCommand.Execute(null);
     }
 
@@ -435,24 +414,6 @@ public partial class MainWindow : Window
         if (e.Source is not Visual sourceVisual)
         {
             return;
-        }
-
-        var isWithinComboBox = IsWithinComboBox(sourceVisual);
-        var isWithinDatePicker = IsWithinDatePicker(sourceVisual);
-        var isWithinPopupVisual = IsWithinPopupVisual(sourceVisual);
-        var isWithinTodoUi = IsWithinClass(sourceVisual, "todoDetailsPanel")
-            || IsWithinClass(sourceVisual, "todoRow")
-            || isWithinComboBox
-            || isWithinDatePicker;
-
-        if (_isTodoPriorityDropDownOpen && (isWithinTodoUi || isWithinPopupVisual) && !isWithinComboBox)
-        {
-            SuppressDetailsCollapse();
-        }
-
-        if (IsWithinDatePicker(sourceVisual))
-        {
-            SuppressDetailsCollapse();
         }
 
         TryCommitWidthPercentInputBeforeFocusChange(sourceVisual);
@@ -582,53 +543,6 @@ public partial class MainWindow : Window
         }
 
         return false;
-    }
-
-    private static bool IsWithinPopupVisual(Visual sourceVisual)
-    {
-        Visual? current = sourceVisual;
-
-        while (current is not null)
-        {
-            var typeName = current.GetType().Name;
-            if (typeName.Contains("Popup", StringComparison.OrdinalIgnoreCase)
-                || typeName.Contains("Flyout", StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-
-            current = current.GetVisualParent();
-        }
-
-        return false;
-    }
-
-    private void SuppressDetailsCollapse()
-    {
-        _suppressNextDetailsCollapse = true;
-
-        var suppressUntilUtc = DateTimeOffset.UtcNow + DetailsCollapseSuppressionDuration;
-        if (suppressUntilUtc > _suppressDetailsCollapseUntilUtc)
-        {
-            _suppressDetailsCollapseUntilUtc = suppressUntilUtc;
-        }
-    }
-
-    private bool ShouldSuppressDetailsCollapse()
-    {
-        if (_suppressNextDetailsCollapse)
-        {
-            _suppressNextDetailsCollapse = false;
-            return true;
-        }
-
-        return DateTimeOffset.UtcNow <= _suppressDetailsCollapseUntilUtc;
-    }
-
-    private void ClearDetailsCollapseSuppression()
-    {
-        _suppressNextDetailsCollapse = false;
-        _suppressDetailsCollapseUntilUtc = DateTimeOffset.MinValue;
     }
 
     private static decimal? TryReadWidthPercentInputTextValue(NumericUpDown? widthInput)
