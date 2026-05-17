@@ -24,7 +24,7 @@
             <Border Classes="todoRow groupedTodoRow"
                     Classes.detailsExpanded="{Binding IsDetailsExpanded}"
                     HorizontalAlignment="Stretch"
-                    Margin="4"
+                    Margin="0"
                     Padding="12,9,12,12"
                     Tapped="TodoItemRow_OnTapped">
                 <Grid ColumnDefinitions="Auto,*,Auto"
@@ -180,13 +180,18 @@
             </Border>
         </DataTemplate>
 
-        <DataTemplate x:Key="TodoGroupTemplate" x:DataType="vm:TodoDayGroupViewModel">
-            <StackPanel Margin="0,0,0,10" Spacing="4">
+        <DataTemplate x:Key="GroupedRowTemplate" x:DataType="vm:TodoGroupedRowViewModel">
+            <Grid>
                 <TextBlock Text="{Binding Header}"
+                           IsVisible="{Binding IsHeader}"
+                           Foreground="#F3F3F3"
                            FontWeight="SemiBold"
-                           Margin="4,4,4,2" />
-                <ItemsControl ItemsSource="{Binding Items}" ItemTemplate="{StaticResource TodoItemTemplate}" />
-            </StackPanel>
+                           Margin="8,8,8,4" />
+
+                <ContentControl Content="{Binding Todo}"
+                                IsVisible="{Binding IsTodo}"
+                                ContentTemplate="{StaticResource TodoItemTemplate}" />
+            </Grid>
         </DataTemplate>
     </Window.Resources>
 
@@ -200,40 +205,94 @@
             <Setter Property="BorderBrush" Value="#4C5460" />
         </Style>
 
-        <Style Selector="ScrollViewer.todoListContent">
+        <Style Selector="ListBox.todoListListBox">
             <Setter Property="Background" Value="#2B2B2B" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="6" />
+        </Style>
+
+        <Style Selector="ListBox.todoListListBox > ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="4" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Stretch" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+
+        <Style Selector="ListBox.todoListListBox > ListBoxItem:pointerover">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+
+        <Style Selector="ListBox.todoListListBox > ListBoxItem:pressed">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+
+        <Style Selector="ListBox.groupedTodoListBox > ListBoxItem" x:DataType="vm:TodoGroupedRowViewModel">
+            <Setter Property="IsEnabled" Value="{Binding IsTodo}" />
+        </Style>
+
+        <Style Selector="ListBox.groupedTodoListBox > ListBoxItem:disabled">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+
+        <Style Selector="ListBox.todoListListBox ListBoxItem /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+
+        <Style Selector="ListBox.todoListListBox ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListMediumBrush}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+
+        <Style Selector="ListBox.todoListListBox ListBoxItem:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListMediumBrush}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+
+        <Style Selector="ListBox.groupedTodoListBox ListBoxItem:disabled:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+
+        <Style Selector="ListBox.groupedTodoListBox ListBoxItem:disabled:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+
+        <Style Selector="ListBox.todoListListBox ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+
+        <Style Selector="ListBox.todoListListBox ListBoxItem:selected:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
         </Style>
 
         <Style Selector="TextBlock.summaryText">
             <Setter Property="Foreground" Value="#C4CAD3" />
         </Style>
 
-        <Style Selector="Grid.todoRow">
-            <Setter Property="Background" Value="Transparent" />
-        </Style>
-
         <Style Selector="Border.groupedTodoRow">
             <Setter Property="Background" Value="Transparent" />
         </Style>
 
-        <Style Selector="Border.groupedTodoRow:pointerover">
-            <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}" />
-        </Style>
-
-        <Style Selector="Border.groupedTodoRow:pressed">
-            <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListMediumBrush}" />
-        </Style>
-
         <Style Selector="Border.groupedTodoRow.detailsExpanded">
             <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListAccentLowBrush}" />
-        </Style>
-
-        <Style Selector="Border.groupedTodoRow.detailsExpanded:pointerover">
-            <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListAccentMediumBrush}" />
-        </Style>
-
-        <Style Selector="Border.groupedTodoRow.detailsExpanded:pressed">
-            <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListAccentHighBrush}" />
         </Style>
     </Window.Styles>
 
@@ -416,13 +475,29 @@
 
                 <Border Grid.Row="1" Classes="todoListSurface" CornerRadius="8" BorderThickness="1">
                     <Grid RowDefinitions="*">
-                        <ScrollViewer Classes="todoListContent" IsVisible="{Binding ShowFlatList}" Padding="6">
-                            <ItemsControl ItemsSource="{Binding VisibleTodos}" ItemTemplate="{StaticResource TodoItemTemplate}" />
-                        </ScrollViewer>
+                        <ListBox Classes="todoListListBox"
+                                 IsVisible="{Binding ShowFlatList}"
+                                 ItemsSource="{Binding VisibleTodos}"
+                                 SelectionChanged="TodoListBox_OnSelectionChanged"
+                                 ItemTemplate="{StaticResource TodoItemTemplate}">
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <VirtualizingStackPanel />
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                        </ListBox>
 
-                        <ScrollViewer Classes="todoListContent" IsVisible="{Binding ShowGroupedList}" Padding="6">
-                            <ItemsControl ItemsSource="{Binding VisibleTodoGroups}" ItemTemplate="{StaticResource TodoGroupTemplate}" />
-                        </ScrollViewer>
+                        <ListBox Classes="todoListListBox groupedTodoListBox"
+                                 IsVisible="{Binding ShowGroupedList}"
+                                 ItemsSource="{Binding VisibleGroupedRows}"
+                                 SelectionChanged="TodoListBox_OnSelectionChanged"
+                                 ItemTemplate="{StaticResource GroupedRowTemplate}">
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <VirtualizingStackPanel />
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                        </ListBox>
                     </Grid>
                 </Border>
             </Grid>

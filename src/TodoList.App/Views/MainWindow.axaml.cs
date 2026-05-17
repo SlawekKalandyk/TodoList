@@ -366,6 +366,16 @@ public partial class MainWindow : Window
         _isTodoPriorityDropDownOpen = false;
     }
 
+    private void TodoListBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (sender is not ListBox listBox || listBox.SelectedIndex < 0)
+        {
+            return;
+        }
+
+        listBox.SelectedIndex = -1;
+    }
+
     private void MainWindow_OnTapped(object? sender, TappedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel viewModel

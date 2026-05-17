@@ -30,7 +30,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public ObservableCollection<TodoItemViewModel> VisibleTodos { get; } = new();
 
-    public ObservableCollection<TodoDayGroupViewModel> VisibleTodoGroups { get; } = new();
+    public ObservableCollection<TodoGroupedRowViewModel> VisibleGroupedRows { get; } = new();
 
     public IReadOnlyList<TodoFilter> AvailableFilters { get; } =
     [
@@ -575,7 +575,7 @@ public partial class MainWindowViewModel : ViewModelBase
             VisibleTodos.Add(todo);
         }
 
-        RebuildGroups(filteredList);
+        RebuildGroupedRows(filteredList);
     }
 
     private IEnumerable<TodoItemViewModel> ApplyStatusFilter(IEnumerable<TodoItemViewModel> todos)
@@ -626,68 +626,59 @@ public partial class MainWindowViewModel : ViewModelBase
         });
     }
 
-    private void RebuildGroups(IReadOnlyList<TodoItemViewModel> todos)
+    private void RebuildGroupedRows(IReadOnlyList<TodoItemViewModel> todos)
     {
+        VisibleGroupedRows.Clear();
+
         if (GroupByDayAdded)
         {
-            RebuildDayGroups(todos);
+            RebuildDayGroupedRows(todos);
             return;
         }
 
         if (GroupByDueDate)
         {
-            RebuildDueDateGroups(todos);
+            RebuildDueDateGroupedRows(todos);
             return;
         }
 
         if (GroupByPriority)
         {
-            RebuildPriorityGroups(todos);
+            RebuildPriorityGroupedRows(todos);
             return;
         }
-
-        VisibleTodoGroups.Clear();
     }
 
-    private void RebuildDayGroups(IReadOnlyList<TodoItemViewModel> todos)
+    private void RebuildDayGroupedRows(IReadOnlyList<TodoItemViewModel> todos)
     {
-        VisibleTodoGroups.Clear();
-
         var groupedTodos = todos
             .GroupBy(todo => todo.CreatedAtUtc.ToLocalTime().Date)
             .OrderByDescending(group => group.Key);
 
         foreach (var dayGroup in groupedTodos)
         {
-            var header = BuildDayHeader(dayGroup.Key);
-            VisibleTodoGroups.Add(
-                new TodoDayGroupViewModel(
-                    header,
-                    ApplyOrderingWithinGroup(dayGroup)));
+            AddGroupedRows(
+                BuildDayHeader(dayGroup.Key),
+                ApplyOrderingWithinGroup(dayGroup));
         }
     }
 
-    private void RebuildPriorityGroups(IReadOnlyList<TodoItemViewModel> todos)
+    private void RebuildPriorityGroupedRows(IReadOnlyList<TodoItemViewModel> todos)
     {
-        VisibleTodoGroups.Clear();
-
         var groupedTodos = todos
             .GroupBy(todo => todo.Priority)
             .OrderByDescending(group => group.Key);
 
         foreach (var priorityGroup in groupedTodos)
         {
-            VisibleTodoGroups.Add(
-                new TodoDayGroupViewModel(
-                    BuildPriorityHeader(priorityGroup.Key),
-                    ApplyOrderingWithinGroup(priorityGroup)));
+            AddGroupedRows(
+                BuildPriorityHeader(priorityGroup.Key),
+                ApplyOrderingWithinGroup(priorityGroup));
         }
     }
 
-    private void RebuildDueDateGroups(IReadOnlyList<TodoItemViewModel> todos)
+    private void RebuildDueDateGroupedRows(IReadOnlyList<TodoItemViewModel> todos)
     {
-        VisibleTodoGroups.Clear();
-
         var groupedTodos = todos.GroupBy(todo => todo.DueAtUtc?.Date);
 
         var orderedGroups = OrderDirectionAscending
@@ -704,10 +695,21 @@ public partial class MainWindowViewModel : ViewModelBase
                 ? BuildDueDateHeader(dueDateGroup.Key.Value)
                 : NoDueDateGroupHeader;
 
-            VisibleTodoGroups.Add(
-                new TodoDayGroupViewModel(
-                    header,
-                    ApplyOrderingWithinGroup(dueDateGroup)));
+            AddGroupedRows(
+                header,
+                ApplyOrderingWithinGroup(dueDateGroup));
+        }
+    }
+
+    private void AddGroupedRows(
+        string header,
+        IEnumerable<TodoItemViewModel> todos)
+    {
+        VisibleGroupedRows.Add(TodoGroupedRowViewModel.CreateHeader(header));
+
+        foreach (var todo in todos)
+        {
+            VisibleGroupedRows.Add(TodoGroupedRowViewModel.CreateTodo(todo));
         }
     }
 
@@ -850,16 +852,35 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 }
 
-public sealed class TodoDayGroupViewModel
+public sealed class TodoGroupedRowViewModel
 {
-    public string Header { get; }
-
-    public ObservableCollection<TodoItemViewModel> Items { get; }
-
-    public TodoDayGroupViewModel(string header, IEnumerable<TodoItemViewModel> items)
+    private TodoGroupedRowViewModel(string header)
     {
         Header = header;
-        Items = new ObservableCollection<TodoItemViewModel>(items);
+        IsHeader = true;
+    }
+
+    private TodoGroupedRowViewModel(TodoItemViewModel todo)
+    {
+        Todo = todo;
+    }
+
+    public bool IsHeader { get; }
+
+    public bool IsTodo => !IsHeader;
+
+    public string Header { get; } = string.Empty;
+
+    public TodoItemViewModel? Todo { get; }
+
+    public static TodoGroupedRowViewModel CreateHeader(string header)
+    {
+        return new TodoGroupedRowViewModel(header);
+    }
+
+    public static TodoGroupedRowViewModel CreateTodo(TodoItemViewModel todo)
+    {
+        return new TodoGroupedRowViewModel(todo);
     }
 }
 
