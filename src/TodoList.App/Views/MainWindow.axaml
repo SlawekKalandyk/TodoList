@@ -486,7 +486,7 @@
             </Grid>
 
                         <Grid Grid.Row="3"
-                                    ColumnDefinitions="Auto,*,Auto"
+                                    ColumnDefinitions="Auto,*,Auto,Auto"
                                     ColumnSpacing="8">
                                 <TextBlock Grid.Column="0"
                                                      Text="Search"
@@ -496,9 +496,13 @@
                                 <TextBox x:Name="SearchTodoTextBox"
                                                  Grid.Column="1"
                                                  Text="{Binding SearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                 Watermark="Search visible todos by title"
+                                                 Watermark="Search visible todos"
                                                  VerticalContentAlignment="Center" />
-                                <Button Grid.Column="2"
+                                <CheckBox Grid.Column="2"
+                                                    VerticalAlignment="Center"
+                                                    Content="Include notes"
+                                                    IsChecked="{Binding IncludeNotesInSearch}" />
+                                <Button Grid.Column="3"
                                                 Content="Clear"
                                                 Padding="12,6"
                                                 Command="{Binding ClearSearchCommand}" />

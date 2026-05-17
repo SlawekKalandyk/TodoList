@@ -103,6 +103,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private string searchQuery = string.Empty;
 
     [ObservableProperty]
+    private bool includeNotesInSearch;
+
+    [ObservableProperty]
     private int activeCount;
 
     [ObservableProperty]
@@ -187,6 +190,12 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         _searchDebounceTimer.Stop();
         _searchDebounceTimer.Start();
+    }
+
+    partial void OnIncludeNotesInSearchChanged(bool value)
+    {
+        _searchDebounceTimer.Stop();
+        ApplyFilter();
     }
 
     partial void OnActiveCountChanged(int value)
@@ -522,7 +531,9 @@ public partial class MainWindowViewModel : ViewModelBase
         if (!string.IsNullOrWhiteSpace(normalizedSearchQuery))
         {
             filteredTodos = filteredTodos.Where(todo =>
-                todo.Title.Contains(normalizedSearchQuery, StringComparison.OrdinalIgnoreCase));
+                todo.Title.Contains(normalizedSearchQuery, StringComparison.OrdinalIgnoreCase)
+                || (IncludeNotesInSearch
+                    && (todo.Notes ?? string.Empty).Contains(normalizedSearchQuery, StringComparison.OrdinalIgnoreCase)));
         }
 
         var filteredList = ApplySelectedOrdering(filteredTodos).ToList();
