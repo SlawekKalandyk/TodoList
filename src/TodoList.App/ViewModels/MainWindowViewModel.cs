@@ -124,6 +124,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private string selectedGroupingOption = NoGroupingOption;
 
     [ObservableProperty]
+    private string selectedGroupingDirection = OrderingDirectionDescendingOption;
+
+    [ObservableProperty]
     private string selectedOrderingOption = OrderByCreationDateOption;
 
     [ObservableProperty]
@@ -141,6 +144,13 @@ public partial class MainWindowViewModel : ViewModelBase
     public bool ShowFlatList => !GroupByDayAdded && !GroupByDueDate && !GroupByPriority;
 
     public bool ShowGroupedList => !ShowFlatList;
+
+    public bool IsGroupingDirectionEnabled => ShowGroupedList;
+
+    public bool GroupDirectionAscending =>
+        string.Equals(SelectedGroupingDirection, OrderingDirectionAscendingOption, StringComparison.Ordinal);
+
+    public bool GroupDirectionDescending => !GroupDirectionAscending;
 
     public bool OrderByDueDate =>
         string.Equals(SelectedOrderingOption, OrderByDueDateOption, StringComparison.Ordinal);
@@ -231,7 +241,15 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(GroupByPriority));
         OnPropertyChanged(nameof(ShowFlatList));
         OnPropertyChanged(nameof(ShowGroupedList));
+        OnPropertyChanged(nameof(IsGroupingDirectionEnabled));
         ApplyFilter(rebuildInactiveBranch: true);
+    }
+
+    partial void OnSelectedGroupingDirectionChanged(string value)
+    {
+        OnPropertyChanged(nameof(GroupDirectionAscending));
+        OnPropertyChanged(nameof(GroupDirectionDescending));
+        ApplyFilter();
     }
 
     partial void OnSelectedOrderingOptionChanged(string value)
@@ -278,8 +296,22 @@ public partial class MainWindowViewModel : ViewModelBase
         SelectedFilter = TodoFilter.Active;
         SelectedPriorityFilter = TodoPriorityFilter.All;
         SelectedGroupingOption = NoGroupingOption;
+        SelectedGroupingDirection = OrderingDirectionDescendingOption;
         SelectedOrderingOption = OrderByCreationDateOption;
         SelectedOrderingDirection = OrderingDirectionDescendingOption;
+    }
+
+    [RelayCommand]
+    private void ToggleGroupingDirection()
+    {
+        if (!IsGroupingDirectionEnabled)
+        {
+            return;
+        }
+
+        SelectedGroupingDirection = GroupDirectionAscending
+            ? OrderingDirectionDescendingOption
+            : OrderingDirectionAscendingOption;
     }
 
     [RelayCommand]
@@ -694,10 +726,13 @@ public partial class MainWindowViewModel : ViewModelBase
         IReadOnlyDictionary<GroupedRowKey, TodoGroupedRowViewModel> existingRowsByKey)
     {
         var groupedTodos = todos
-            .GroupBy(todo => todo.CreatedAtUtc.ToLocalTime().Date)
-            .OrderByDescending(group => group.Key);
+            .GroupBy(todo => todo.CreatedAtUtc.ToLocalTime().Date);
 
-        foreach (var dayGroup in groupedTodos)
+        var orderedGroups = GroupDirectionAscending
+            ? groupedTodos.OrderBy(group => group.Key)
+            : groupedTodos.OrderByDescending(group => group.Key);
+
+        foreach (var dayGroup in orderedGroups)
         {
             AddGroupedRows(
                 BuildDayHeader(dayGroup.Key),
@@ -713,10 +748,13 @@ public partial class MainWindowViewModel : ViewModelBase
         IReadOnlyDictionary<GroupedRowKey, TodoGroupedRowViewModel> existingRowsByKey)
     {
         var groupedTodos = todos
-            .GroupBy(todo => todo.Priority)
-            .OrderByDescending(group => group.Key);
+            .GroupBy(todo => todo.Priority);
 
-        foreach (var priorityGroup in groupedTodos)
+        var orderedGroups = GroupDirectionAscending
+            ? groupedTodos.OrderBy(group => group.Key)
+            : groupedTodos.OrderByDescending(group => group.Key);
+
+        foreach (var priorityGroup in orderedGroups)
         {
             AddGroupedRows(
                 BuildPriorityHeader(priorityGroup.Key),
@@ -733,7 +771,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         var groupedTodos = todos.GroupBy(todo => todo.DueAtUtc?.Date);
 
-        var orderedGroups = OrderDirectionAscending
+        var orderedGroups = GroupDirectionAscending
             ? groupedTodos
                 .OrderBy(group => group.Key.HasValue ? 0 : 1)
                 .ThenBy(group => group.Key ?? DateTime.MaxValue)

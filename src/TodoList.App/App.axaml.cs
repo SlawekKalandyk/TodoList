@@ -100,6 +100,7 @@ public partial class App : Application
         viewModel.SelectedSmartView = settings.SelectedSmartView;
         viewModel.SelectedPriorityFilter = settings.SelectedPriorityFilter;
         viewModel.SelectedGroupingOption = settings.SelectedGroupingOption;
+        viewModel.SelectedGroupingDirection = settings.SelectedGroupingDirection;
         viewModel.SelectedOrderingOption = settings.SelectedOrderingOption;
         viewModel.SelectedOrderingDirection = settings.SelectedOrderingDirection;
     }
@@ -153,6 +154,8 @@ public partial class App : Application
     {
         var defaultGroupingOption = AvailableGroupingOptions.First();
         var groupingOption = settings.SelectedGroupingOption;
+        var defaultGroupingDirection = AvailableOrderingDirections.First();
+        var groupingDirection = settings.SelectedGroupingDirection;
         var defaultOrderingOption = AvailableOrderingOptions.First();
         var orderingOption = settings.SelectedOrderingOption;
         var defaultOrderingDirection = AvailableOrderingDirections.First();
@@ -168,6 +171,12 @@ public partial class App : Application
             || !AvailableOrderingOptions.Contains(orderingOption))
         {
             orderingOption = defaultOrderingOption;
+        }
+
+        if (string.IsNullOrWhiteSpace(groupingDirection)
+            || !AvailableOrderingDirections.Contains(groupingDirection))
+        {
+            groupingDirection = defaultGroupingDirection;
         }
 
         if (string.IsNullOrWhiteSpace(orderingDirection)
@@ -200,6 +209,7 @@ public partial class App : Application
             SelectedSmartView = selectedSmartView,
             SelectedPriorityFilter = selectedPriorityFilter,
             SelectedGroupingOption = groupingOption,
+            SelectedGroupingDirection = groupingDirection,
             SelectedOrderingOption = orderingOption,
             SelectedOrderingDirection = orderingDirection,
         };
@@ -217,6 +227,7 @@ public partial class App : Application
             SelectedSmartView = viewModel.SelectedSmartView,
             SelectedPriorityFilter = viewModel.SelectedPriorityFilter,
             SelectedGroupingOption = viewModel.SelectedGroupingOption,
+            SelectedGroupingDirection = viewModel.SelectedGroupingDirection,
             SelectedOrderingOption = viewModel.SelectedOrderingOption,
             SelectedOrderingDirection = viewModel.SelectedOrderingDirection,
         };
@@ -242,6 +253,7 @@ public partial class App : Application
                 or nameof(MainWindowViewModel.SelectedSmartView)
                 or nameof(MainWindowViewModel.SelectedPriorityFilter)
                 or nameof(MainWindowViewModel.SelectedGroupingOption)
+                or nameof(MainWindowViewModel.SelectedGroupingDirection)
                 or nameof(MainWindowViewModel.SelectedOrderingOption)
                 or nameof(MainWindowViewModel.SelectedOrderingDirection))
             {
