@@ -6,6 +6,7 @@ TodoList is an Avalonia desktop todo app that runs as a tray-first right-side pa
 
 - .NET 8 Avalonia MVVM desktop app.
 - Tray-first startup (panel starts hidden).
+- Lazy startup allocation: window, repository, and main view model are created only when the panel is first opened.
 - Tray icon actions:
   - Toggle Todos
   - Exit
@@ -17,24 +18,32 @@ TodoList is an Avalonia desktop todo app that runs as a tray-first right-side pa
 
 - Add todos with a priority: Minor, Normal (default), Major, Critical.
 - Mark complete, delete, reject, and restore rejected items.
-- Inline rename by double-click:
+- Inline rename by Rename button (pen icon):
   - Enter or focus loss commits
   - Escape cancels
 - Expand per-todo details panel to edit:
   - Priority
   - Due date (with clear action)
   - Notes
+- Smart views:
+  - None
+  - Due today
+  - Due soon (next 7 days)
+  - Overdue
 - Filters combine with AND semantics:
   - Status filter: Active, Completed, Rejected, All
   - Priority filter: All, Minor, Normal, Major, Critical
+  - Search query over title, with optional notes search
+  - Note: when Smart View is not None, status filter is disabled by design
 - Grouping options:
   - None
   - Added day
   - Due date
   - Priority
 - Ordering options:
-  - None
+  - Creation date
   - Due date
+  - Priority
   - Direction: Descending or Ascending
 - Summary counts for active, completed, and rejected.
 
@@ -43,13 +52,16 @@ TodoList is an Avalonia desktop todo app that runs as a tray-first right-side pa
 - Width control is stored as a percent where 100% = 600px.
 - Allowed width percent range is 80-200 (480px-1200px).
 - Pin toggle keeps the panel open when focus changes.
+- Keyboard shortcuts:
+  - Ctrl+F focuses search
+  - Escape clears search when search is focused
 
 ## Tech Stack
 
-- Avalonia 11
-- CommunityToolkit.Mvvm
-- Dapper
-- Microsoft.Data.Sqlite
+- Avalonia 11.3.6
+- CommunityToolkit.Mvvm 8.2.1
+- Dapper 2.1.35
+- Microsoft.Data.Sqlite 8.0.12
 
 ## Getting Started
 
@@ -79,6 +91,7 @@ SQLite schema migrations are additive (missing columns are added when needed).
 - Panel width percent
 - Pin state
 - Selected status filter
+- Selected smart view
 - Selected priority filter
 - Selected grouping option
 - Selected ordering option
