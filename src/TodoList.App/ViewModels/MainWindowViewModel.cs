@@ -26,6 +26,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private readonly ITodoRepository _todoRepository;
     private readonly List<TodoItemViewModel> _allTodos = new();
+    private readonly Dictionary<long, TodoItemViewModel> _todoById = new();
     private readonly DispatcherTimer _searchDebounceTimer;
 
     public ObservableCollection<TodoItemViewModel> VisibleTodos { get; } = new();
@@ -297,7 +298,7 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        if (!_allTodos.Any(item => item.Id == todo.Id))
+        if (!_todoById.ContainsKey(todo.Id))
         {
             LoadTodos();
             return;
@@ -342,7 +343,7 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        if (!_allTodos.Any(item => item.Id == todo.Id))
+        if (!_todoById.ContainsKey(todo.Id))
         {
             LoadTodos();
             return;
@@ -363,7 +364,7 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        if (!_allTodos.Any(item => item.Id == todo.Id))
+        if (!_todoById.ContainsKey(todo.Id))
         {
             LoadTodos();
             return;
@@ -436,7 +437,6 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         _todoRepository.UpdatePriority(todo.Id, todo.Priority);
-        SortTodosInDisplayOrder();
         ApplyFilter();
     }
 
@@ -540,10 +540,13 @@ public partial class MainWindowViewModel : ViewModelBase
     private void LoadTodos()
     {
         _allTodos.Clear();
+        _todoById.Clear();
 
         foreach (var todo in _todoRepository.GetAll())
         {
-            _allTodos.Add(TodoItemViewModel.From(todo));
+            var todoViewModel = TodoItemViewModel.From(todo);
+            _allTodos.Add(todoViewModel);
+            _todoById[todoViewModel.Id] = todoViewModel;
         }
 
         RecalculateSummaryCounts();
@@ -565,56 +568,18 @@ public partial class MainWindowViewModel : ViewModelBase
             return false;
         }
 
+        var todoToRemove = _allTodos[index];
         _allTodos.RemoveAt(index);
+        _todoById.Remove(todoToRemove.Id);
         return true;
     }
 
     private void ApplyFilter(bool rebuildInactiveBranch = false)
     {
-        var today = DateTime.Now.Date;
-        var dueSoonRangeEnd = today.AddDays(7);
-
-        IEnumerable<TodoItemViewModel> filteredTodos = SelectedSmartView switch
+        if (!TryGetFilteredTodosFromRepository(out var filteredList))
         {
-            TodoSmartView.Today => _allTodos.Where(todo =>
-                IsActive(todo)
-                && todo.DueAtUtc.HasValue
-                && todo.DueAtUtc.Value.Date == today),
-            TodoSmartView.Overdue => _allTodos.Where(todo =>
-                IsActive(todo)
-                && todo.DueAtUtc.HasValue
-                && todo.DueAtUtc.Value.Date < today),
-            TodoSmartView.DueSoon => _allTodos.Where(todo =>
-                IsActive(todo)
-                && todo.DueAtUtc.HasValue
-                && todo.DueAtUtc.Value.Date >= today.AddDays(1)
-                && todo.DueAtUtc.Value.Date <= dueSoonRangeEnd),
-            _ => _allTodos,
-        };
-
-        filteredTodos = SelectedSmartView == TodoSmartView.None
-            ? ApplyStatusFilter(filteredTodos)
-            : filteredTodos;
-
-        filteredTodos = SelectedPriorityFilter switch
-        {
-            TodoPriorityFilter.Minor => filteredTodos.Where(todo => todo.Priority == TodoPriority.Minor),
-            TodoPriorityFilter.Normal => filteredTodos.Where(todo => todo.Priority == TodoPriority.Normal),
-            TodoPriorityFilter.Major => filteredTodos.Where(todo => todo.Priority == TodoPriority.Major),
-            TodoPriorityFilter.Critical => filteredTodos.Where(todo => todo.Priority == TodoPriority.Critical),
-            _ => filteredTodos,
-        };
-
-        var normalizedSearchQuery = SearchQuery.Trim();
-        if (!string.IsNullOrWhiteSpace(normalizedSearchQuery))
-        {
-            filteredTodos = filteredTodos.Where(todo =>
-                todo.Title.Contains(normalizedSearchQuery, StringComparison.OrdinalIgnoreCase)
-                || (IncludeNotesInSearch
-                    && (todo.Notes ?? string.Empty).Contains(normalizedSearchQuery, StringComparison.OrdinalIgnoreCase)));
+            return;
         }
-
-        var filteredList = ApplySelectedOrdering(filteredTodos).ToList();
 
         if (ShowFlatList)
         {
@@ -634,52 +599,67 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    private IEnumerable<TodoItemViewModel> ApplyStatusFilter(IEnumerable<TodoItemViewModel> todos)
+    private bool TryGetFilteredTodosFromRepository(out List<TodoItemViewModel> filteredTodos)
     {
-        return SelectedFilter switch
+        var queryOptions = BuildTodoQueryOptions();
+        var filteredTodoIds = _todoRepository.QueryIds(queryOptions);
+
+        filteredTodos = new List<TodoItemViewModel>(filteredTodoIds.Count);
+
+        foreach (var todoId in filteredTodoIds)
         {
-            TodoFilter.Active => todos.Where(todo => !todo.IsCompleted && !todo.IsRejected),
-            TodoFilter.Completed => todos.Where(todo => todo.IsCompleted && !todo.IsRejected),
-            TodoFilter.Rejected => todos.Where(todo => todo.IsRejected),
-            _ => todos,
+            if (_todoById.TryGetValue(todoId, out var todo))
+            {
+                filteredTodos.Add(todo);
+                continue;
+            }
+
+            LoadTodos();
+            filteredTodos = new List<TodoItemViewModel>();
+            return false;
+        }
+
+        return true;
+    }
+
+    private TodoQueryOptions BuildTodoQueryOptions()
+    {
+        var today = DateTime.Now.Date;
+
+        return new TodoQueryOptions
+        {
+            SmartView = SelectedSmartView,
+            StatusFilter = SelectedFilter,
+            PriorityFilter = SelectedPriorityFilter,
+            SearchQuery = SearchQuery,
+            IncludeNotesInSearch = IncludeNotesInSearch,
+            Ordering = ResolveSelectedOrdering(),
+            OrderAscending = OrderDirectionAscending,
+            TodayStartUtcUnix = LocalDateStartToUtcUnix(today),
+            TomorrowStartUtcUnix = LocalDateStartToUtcUnix(today.AddDays(1)),
+            DueSoonEndExclusiveUtcUnix = LocalDateStartToUtcUnix(today.AddDays(8)),
         };
     }
 
-    private static bool IsActive(TodoItemViewModel todo)
+    private TodoOrdering ResolveSelectedOrdering()
     {
-        return !todo.IsCompleted && !todo.IsRejected;
+        if (OrderByDueDate)
+        {
+            return TodoOrdering.DueDate;
+        }
+
+        if (OrderByPriority)
+        {
+            return TodoOrdering.Priority;
+        }
+
+        return TodoOrdering.CreationDate;
     }
 
-    private void SortTodosInDisplayOrder()
+    private static long LocalDateStartToUtcUnix(DateTime localDate)
     {
-        _allTodos.Sort((left, right) =>
-        {
-            var rejectedOrder = left.IsRejected.CompareTo(right.IsRejected);
-            if (rejectedOrder != 0)
-            {
-                return rejectedOrder;
-            }
-
-            var completedOrder = left.IsCompleted.CompareTo(right.IsCompleted);
-            if (completedOrder != 0)
-            {
-                return completedOrder;
-            }
-
-            var priorityOrder = right.Priority.CompareTo(left.Priority);
-            if (priorityOrder != 0)
-            {
-                return priorityOrder;
-            }
-
-            var createdOrder = right.CreatedAtUtc.CompareTo(left.CreatedAtUtc);
-            if (createdOrder != 0)
-            {
-                return createdOrder;
-            }
-
-            return right.Id.CompareTo(left.Id);
-        });
+        var localStart = DateTime.SpecifyKind(localDate.Date, DateTimeKind.Local);
+        return new DateTimeOffset(localStart).ToUniversalTime().ToUnixTimeSeconds();
     }
 
     private void RebuildGroupedRows(IReadOnlyList<TodoItemViewModel> todos)
@@ -721,7 +701,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             AddGroupedRows(
                 BuildDayHeader(dayGroup.Key),
-                ApplyOrderingWithinGroup(dayGroup),
+                dayGroup,
                 destination,
                 existingRowsByKey);
         }
@@ -740,7 +720,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             AddGroupedRows(
                 BuildPriorityHeader(priorityGroup.Key),
-                ApplyOrderingWithinGroup(priorityGroup),
+                priorityGroup,
                 destination,
                 existingRowsByKey);
         }
@@ -769,7 +749,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
             AddGroupedRows(
                 header,
-                ApplyOrderingWithinGroup(dueDateGroup),
+                dueDateGroup,
                 destination,
                 existingRowsByKey);
         }
@@ -931,102 +911,6 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             return new GroupedRowKey(false, string.Empty, todoId);
         }
-    }
-
-    private IEnumerable<TodoItemViewModel> ApplySelectedOrdering(IEnumerable<TodoItemViewModel> todos)
-    {
-        if (OrderByDueDate)
-        {
-            return OrderByDueDateThenFallback(todos, OrderDirectionAscending);
-        }
-
-        if (OrderByCreationDate)
-        {
-            return OrderByCreatedAtThenId(todos, OrderDirectionAscending);
-        }
-
-        if (OrderByPriority)
-        {
-            return OrderByPriorityThenFallback(todos, OrderDirectionAscending);
-        }
-
-        return OrderByCreatedAtThenId(todos, ascending: false);
-    }
-
-    private IEnumerable<TodoItemViewModel> ApplyOrderingWithinGroup(IEnumerable<TodoItemViewModel> todos)
-    {
-        if (OrderByDueDate)
-        {
-            return OrderByDueDateThenFallback(todos, OrderDirectionAscending);
-        }
-
-        if (OrderByCreationDate)
-        {
-            return OrderByCreatedAtThenId(todos, OrderDirectionAscending);
-        }
-
-        if (OrderByPriority)
-        {
-            return OrderByPriorityThenFallback(todos, OrderDirectionAscending);
-        }
-
-        return todos
-            .OrderByDescending(todo => todo.CreatedAtUtc)
-            .ThenByDescending(todo => todo.Id);
-    }
-
-    private static IEnumerable<TodoItemViewModel> OrderByCreatedAtThenId(
-        IEnumerable<TodoItemViewModel> todos,
-        bool ascending)
-    {
-        if (ascending)
-        {
-            return todos
-                .OrderBy(todo => todo.CreatedAtUtc)
-                .ThenBy(todo => todo.Id);
-        }
-
-        return todos
-            .OrderByDescending(todo => todo.CreatedAtUtc)
-            .ThenByDescending(todo => todo.Id);
-    }
-
-    private static IEnumerable<TodoItemViewModel> OrderByPriorityThenFallback(
-        IEnumerable<TodoItemViewModel> todos,
-        bool ascending)
-    {
-        if (ascending)
-        {
-            return todos
-                .OrderBy(todo => todo.Priority)
-                .ThenByDescending(todo => todo.CreatedAtUtc)
-                .ThenByDescending(todo => todo.Id);
-        }
-
-        return todos
-            .OrderByDescending(todo => todo.Priority)
-            .ThenByDescending(todo => todo.CreatedAtUtc)
-            .ThenByDescending(todo => todo.Id);
-    }
-
-    private static IEnumerable<TodoItemViewModel> OrderByDueDateThenFallback(
-        IEnumerable<TodoItemViewModel> todos,
-        bool ascending)
-    {
-        if (ascending)
-        {
-            return todos
-                .OrderBy(todo => todo.DueAtUtc.HasValue ? 0 : 1)
-                .ThenBy(todo => todo.DueAtUtc ?? DateTimeOffset.MaxValue)
-                .ThenByDescending(todo => todo.CreatedAtUtc)
-                .ThenByDescending(todo => todo.Id);
-        }
-
-        return todos
-            .OrderBy(todo => todo.DueAtUtc.HasValue ? 0 : 1)
-            .ThenByDescending(todo => todo.DueAtUtc ?? DateTimeOffset.MinValue)
-            .ThenByDescending(todo => todo.CreatedAtUtc)
-            .ThenByDescending(todo => todo.Id);
     }
 
     private static string BuildDayHeader(DateTime localDate)

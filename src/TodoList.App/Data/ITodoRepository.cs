@@ -8,6 +8,8 @@ public interface ITodoRepository
 {
     IReadOnlyList<TodoItem> GetAll();
 
+    IReadOnlyList<long> QueryIds(TodoQueryOptions options);
+
     long Add(string title, TodoPriority priority);
 
     void Rename(long id, string title);
