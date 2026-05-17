@@ -54,6 +54,7 @@ public partial class App : Application
             mainWindowViewModel.SelectedPriorityFilter = appSettings.SelectedPriorityFilter;
             mainWindowViewModel.SelectedGroupingOption = appSettings.SelectedGroupingOption;
             mainWindowViewModel.SelectedOrderingOption = appSettings.SelectedOrderingOption;
+            mainWindowViewModel.SelectedOrderingDirection = appSettings.SelectedOrderingDirection;
 
             WireSettingsPersistence(_mainWindow, mainWindowViewModel, settingsStore, desktop);
 
@@ -86,6 +87,8 @@ public partial class App : Application
         var groupingOption = settings.SelectedGroupingOption;
         var defaultOrderingOption = viewModel.AvailableOrderingOptions.FirstOrDefault() ?? "None";
         var orderingOption = settings.SelectedOrderingOption;
+        var defaultOrderingDirection = viewModel.AvailableOrderingDirections.FirstOrDefault() ?? "Descending";
+        var orderingDirection = settings.SelectedOrderingDirection;
 
         if (string.IsNullOrWhiteSpace(groupingOption)
             || !viewModel.AvailableGroupingOptions.Contains(groupingOption))
@@ -97,6 +100,12 @@ public partial class App : Application
             || !viewModel.AvailableOrderingOptions.Contains(orderingOption))
         {
             orderingOption = defaultOrderingOption;
+        }
+
+        if (string.IsNullOrWhiteSpace(orderingDirection)
+            || !viewModel.AvailableOrderingDirections.Contains(orderingDirection))
+        {
+            orderingDirection = defaultOrderingDirection;
         }
 
         var selectedFilter = Enum.IsDefined(typeof(TodoFilter), settings.SelectedFilter)
@@ -119,6 +128,7 @@ public partial class App : Application
             SelectedPriorityFilter = selectedPriorityFilter,
             SelectedGroupingOption = groupingOption,
             SelectedOrderingOption = orderingOption,
+            SelectedOrderingDirection = orderingDirection,
         };
     }
 
@@ -134,6 +144,7 @@ public partial class App : Application
             SelectedPriorityFilter = viewModel.SelectedPriorityFilter,
             SelectedGroupingOption = viewModel.SelectedGroupingOption,
             SelectedOrderingOption = viewModel.SelectedOrderingOption,
+            SelectedOrderingDirection = viewModel.SelectedOrderingDirection,
         };
     }
 
@@ -162,7 +173,8 @@ public partial class App : Application
                 or nameof(MainWindowViewModel.SelectedFilter)
                 or nameof(MainWindowViewModel.SelectedPriorityFilter)
                 or nameof(MainWindowViewModel.SelectedGroupingOption)
-                or nameof(MainWindowViewModel.SelectedOrderingOption))
+                or nameof(MainWindowViewModel.SelectedOrderingOption)
+                or nameof(MainWindowViewModel.SelectedOrderingDirection))
             {
                 SaveCurrentSettings();
             }

@@ -170,16 +170,36 @@
                                   MaxWidth="180"
                                   ItemsSource="{Binding AvailableGroupingOptions}"
                                   SelectedItem="{Binding SelectedGroupingOption}" />
-                    </Grid>
+                                        </Grid>
 
-                    <TextBlock Text="Order By"
-                               FontSize="11"
-                               Opacity="0.85" />
-                    <ComboBox MinWidth="140"
-                              MaxWidth="180"
-                              HorizontalAlignment="Left"
-                              ItemsSource="{Binding AvailableOrderingOptions}"
-                              SelectedItem="{Binding SelectedOrderingOption}" />
+                                        <Grid ColumnDefinitions="Auto,Auto,*"
+                                                    RowDefinitions="Auto,Auto"
+                                                    ColumnSpacing="8"
+                                                    RowSpacing="4">
+                                                <TextBlock Grid.Row="0"
+                                                                     Grid.Column="0"
+                                                                     Text="Order By"
+                                                                     FontSize="11"
+                                                                     Opacity="0.85" />
+                                                <TextBlock Grid.Row="0"
+                                                                     Grid.Column="1"
+                                                                     Text="Direction"
+                                                                     FontSize="11"
+                                                                     Opacity="0.85" />
+
+                                                <ComboBox Grid.Row="1"
+                                                                    Grid.Column="0"
+                                                                    MinWidth="140"
+                                                                    MaxWidth="180"
+                                                                    ItemsSource="{Binding AvailableOrderingOptions}"
+                                                                    SelectedItem="{Binding SelectedOrderingOption}" />
+                                                <ComboBox Grid.Row="1"
+                                                                    Grid.Column="1"
+                                                                    MinWidth="140"
+                                                                    MaxWidth="180"
+                                                                    ItemsSource="{Binding AvailableOrderingDirections}"
+                                                                    SelectedItem="{Binding SelectedOrderingDirection}" />
+                                        </Grid>
                 </StackPanel>
 
                 <Border Grid.Row="1" Classes="todoListSurface" CornerRadius="8" BorderThickness="1">

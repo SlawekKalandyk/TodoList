@@ -13,4 +13,6 @@ public sealed class AppUiSettings
     public string SelectedGroupingOption { get; set; } = "None";
 
     public string SelectedOrderingOption { get; set; } = "None";
+
+    public string SelectedOrderingDirection { get; set; } = "Descending";
 }
