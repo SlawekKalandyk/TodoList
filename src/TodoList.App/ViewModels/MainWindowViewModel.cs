@@ -24,10 +24,10 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public IReadOnlyList<TodoFilter> AvailableFilters { get; } =
     [
+        TodoFilter.All,
         TodoFilter.Active,
         TodoFilter.Completed,
         TodoFilter.Rejected,
-        TodoFilter.All,
     ];
 
     public IReadOnlyList<TodoPriorityFilter> AvailablePriorityFilters { get; } =
