@@ -22,7 +22,6 @@ public partial class MainWindow : Window
     private static readonly TimeSpan DetailsCollapseSuppressionDuration = TimeSpan.FromMilliseconds(450);
 
     private bool _isTodoPriorityDropDownOpen;
-    private TodoPriority? _priorityValueAtDropDownOpen;
     private bool _suppressNextDetailsCollapse;
     private DateTimeOffset _suppressDetailsCollapseUntilUtc = DateTimeOffset.MinValue;
 
@@ -240,6 +239,18 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (IsTapWithinVisibleTodoDetailsPanel(e))
+        {
+            e.Handled = true;
+            return;
+        }
+
+        if (_isTodoPriorityDropDownOpen)
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (ShouldSuppressDetailsCollapse())
         {
             e.Handled = true;
@@ -335,30 +346,14 @@ public partial class MainWindow : Window
     private void TodoPriorityComboBox_OnDropDownOpened(object? sender, EventArgs e)
     {
         _isTodoPriorityDropDownOpen = true;
-        _priorityValueAtDropDownOpen = sender is ComboBox comboBox && comboBox.SelectedItem is TodoPriority priority
-            ? priority
-            : null;
     }
 
     private void TodoPriorityComboBox_OnDropDownClosed(object? sender, EventArgs e)
     {
         _isTodoPriorityDropDownOpen = false;
 
-        var currentPriority = sender is ComboBox comboBox && comboBox.SelectedItem is TodoPriority priority
-            ? priority
-            : (TodoPriority?)null;
-
-        // Suppress the immediate post-close tap only when no actual value change occurred.
-        var shouldSuppressDetailsCollapse = _priorityValueAtDropDownOpen.HasValue
-            && currentPriority.HasValue
-            && _priorityValueAtDropDownOpen.Value == currentPriority.Value;
-
-        if (shouldSuppressDetailsCollapse)
-        {
-            SuppressDetailsCollapse();
-        }
-
-        _priorityValueAtDropDownOpen = null;
+        // The click/tap that closes the dropdown should not also collapse the details panel.
+        SuppressDetailsCollapse();
     }
 
     private void MainWindow_OnTapped(object? sender, TappedEventArgs e)
@@ -379,13 +374,20 @@ public partial class MainWindow : Window
         var isWithinComboBox = IsWithinComboBox(sourceVisual);
         var isWithinDatePicker = IsWithinDatePicker(sourceVisual);
         var isWithinPopupVisual = IsWithinPopupVisual(sourceVisual);
+        var isWithinDetailsPanelByPosition = IsTapWithinVisibleTodoDetailsPanel(e);
 
         var isWithinTodoUi = IsWithinClass(sourceVisual, "todoDetailsPanel")
             || IsWithinClass(sourceVisual, "todoRow")
             || isWithinComboBox
             || isWithinDatePicker;
 
-        if (_isTodoPriorityDropDownOpen && isWithinTodoUi && !isWithinComboBox)
+        if (_isTodoPriorityDropDownOpen && !isWithinComboBox)
+        {
+            SuppressDetailsCollapse();
+            return;
+        }
+
+        if (isWithinDetailsPanelByPosition)
         {
             return;
         }
@@ -414,6 +416,19 @@ public partial class MainWindow : Window
         if (e.Source is not Visual sourceVisual)
         {
             return;
+        }
+
+        var isWithinComboBox = IsWithinComboBox(sourceVisual);
+        var isWithinDatePicker = IsWithinDatePicker(sourceVisual);
+        var isWithinPopupVisual = IsWithinPopupVisual(sourceVisual);
+        var isWithinTodoUi = IsWithinClass(sourceVisual, "todoDetailsPanel")
+            || IsWithinClass(sourceVisual, "todoRow")
+            || isWithinComboBox
+            || isWithinDatePicker;
+
+        if (_isTodoPriorityDropDownOpen && (isWithinTodoUi || isWithinPopupVisual) && !isWithinComboBox)
+        {
+            SuppressDetailsCollapse();
         }
 
         if (IsWithinDatePicker(sourceVisual))
@@ -659,6 +674,33 @@ public partial class MainWindow : Window
             }
 
             current = current.GetVisualParent();
+        }
+
+        return false;
+    }
+
+    private bool IsTapWithinVisibleTodoDetailsPanel(TappedEventArgs tappedEventArgs)
+    {
+        var tapPosition = tappedEventArgs.GetPosition(this);
+
+        foreach (var detailsPanel in this.GetVisualDescendants().OfType<Border>())
+        {
+            if (!detailsPanel.IsVisible || !detailsPanel.Classes.Contains("todoDetailsPanel"))
+            {
+                continue;
+            }
+
+            var detailsPanelTopLeft = detailsPanel.TranslatePoint(default, this);
+            if (detailsPanelTopLeft is null)
+            {
+                continue;
+            }
+
+            var detailsPanelBounds = new Rect(detailsPanelTopLeft.Value, detailsPanel.Bounds.Size);
+            if (detailsPanelBounds.Contains(tapPosition))
+            {
+                return true;
+            }
         }
 
         return false;
