@@ -222,8 +222,7 @@
                                                 HorizontalAlignment="Stretch"
                                                 Margin="4"
                                                 Padding="12,9,12,12"
-                                                Tapped="TodoItemRow_OnTapped"
-                                                DoubleTapped="TodoItemRow_OnDoubleTapped">
+                                            Tapped="TodoItemRow_OnTapped">
                                             <Grid ColumnDefinitions="Auto,*,Auto"
                                                   RowDefinitions="Auto,Auto"
                                                   ColumnSpacing="8"
@@ -261,18 +260,37 @@
                                                         </TextBox.KeyBindings>
                                                     </TextBox>
                                                 </StackPanel>
-                                                <Button Grid.Column="2"
-                                                        VerticalAlignment="Top"
+                                                <StackPanel Grid.Column="2"
+                                                        Orientation="Horizontal"
+                                                        Spacing="6"
+                                                        VerticalAlignment="Top">
+                                                    <Button Width="28"
+                                                        Height="28"
+                                                        MinWidth="28"
+                                                        MinHeight="28"
+                                                        Padding="0"
+                                                            Classes="renameTodoButton"
+                                                        ToolTip.Tip="Rename"
+                                                        Click="TodoRenameButton_OnClick">
+                                                    <Path Width="12"
+                                                          Height="12"
+                                                          HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"
+                                                          Stretch="Uniform"
+                                                          Fill="#C4CAD3"
+                                                          Data="M3,17.25V21H6.75L17.81,9.94L14.06,6.19L3,17.25M20.71,7.04C21.1,6.65 21.1,6.02 20.71,5.63L18.37,3.29C17.98,2.9 17.35,2.9 16.96,3.29L15.13,5.12L18.88,8.87L20.71,7.04Z" />
+                                                    </Button>
+                                                    <Button VerticalAlignment="Top"
                                                         IsVisible="{Binding CanReject}"
                                                         Content="Reject"
                                                         Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).RejectTodoCommand}"
                                                         CommandParameter="{Binding}" />
-                                                <Button Grid.Column="2"
-                                                        VerticalAlignment="Top"
+                                                    <Button VerticalAlignment="Top"
                                                         IsVisible="{Binding IsRejected}"
                                                         Content="Restore"
                                                         Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).RestoreTodoCommand}"
                                                         CommandParameter="{Binding}" />
+                                                </StackPanel>
                                                 <Border Classes="todoDetailsPanel"
                                                         Grid.Row="1"
                                                         Grid.Column="1"
@@ -377,8 +395,7 @@
                                                             HorizontalAlignment="Stretch"
                                                                 Margin="4"
                                                                 Padding="12,9,12,12"
-                                                                Tapped="TodoItemRow_OnTapped"
-                                                                DoubleTapped="TodoItemRow_OnDoubleTapped">
+                                                                Tapped="TodoItemRow_OnTapped">
                                                             <Grid ColumnDefinitions="Auto,*,Auto"
                                                                   RowDefinitions="Auto,Auto"
                                                                   ColumnSpacing="8"
@@ -416,18 +433,37 @@
                                                                         </TextBox.KeyBindings>
                                                                     </TextBox>
                                                                 </StackPanel>
-                                                                <Button Grid.Column="2"
-                                                                        VerticalAlignment="Top"
+                                                                <StackPanel Grid.Column="2"
+                                                                        Orientation="Horizontal"
+                                                                        Spacing="6"
+                                                                        VerticalAlignment="Top">
+                                                                    <Button Width="28"
+                                                                        Height="28"
+                                                                        MinWidth="28"
+                                                                        MinHeight="28"
+                                                                        Padding="0"
+                                                                            Classes="renameTodoButton"
+                                                                        ToolTip.Tip="Rename"
+                                                                        Click="TodoRenameButton_OnClick">
+                                                                    <Path Width="12"
+                                                                          Height="12"
+                                                                          HorizontalAlignment="Center"
+                                                                          VerticalAlignment="Center"
+                                                                          Stretch="Uniform"
+                                                                          Fill="#C4CAD3"
+                                                                          Data="M3,17.25V21H6.75L17.81,9.94L14.06,6.19L3,17.25M20.71,7.04C21.1,6.65 21.1,6.02 20.71,5.63L18.37,3.29C17.98,2.9 17.35,2.9 16.96,3.29L15.13,5.12L18.88,8.87L20.71,7.04Z" />
+                                                                    </Button>
+                                                                    <Button VerticalAlignment="Top"
                                                                         IsVisible="{Binding CanReject}"
                                                                         Content="Reject"
                                                                         Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).RejectTodoCommand}"
                                                                         CommandParameter="{Binding}" />
-                                                                <Button Grid.Column="2"
-                                                                        VerticalAlignment="Top"
+                                                                    <Button VerticalAlignment="Top"
                                                                         IsVisible="{Binding IsRejected}"
                                                                         Content="Restore"
                                                                         Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).RestoreTodoCommand}"
                                                                         CommandParameter="{Binding}" />
+                                                                </StackPanel>
                                                                 <Border Classes="todoDetailsPanel"
                                                                         Grid.Row="1"
                                                                         Grid.Column="1"

@@ -217,26 +217,11 @@ public partial class MainWindow : Window
         return true;
     }
 
-    private void TodoItemRow_OnDoubleTapped(object? sender, TappedEventArgs e)
+    private void TodoRenameButton_OnClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel viewModel
-            || sender is not Control row
-            || row.DataContext is not TodoItemViewModel todo)
-        {
-            return;
-        }
-
-        if (e.Source is Visual sourceVisual
-            && (IsWithinClass(sourceVisual, "todoDetailsPanel")
-                || sourceVisual is Button
-                || sourceVisual is CheckBox
-                || sourceVisual is ComboBox
-                || sourceVisual is TextBox
-                || sourceVisual.FindAncestorOfType<Button>() is not null
-                || sourceVisual.FindAncestorOfType<CheckBox>() is not null
-                || sourceVisual.FindAncestorOfType<ComboBox>() is not null
-                || IsWithinDatePicker(sourceVisual)
-                || sourceVisual.FindAncestorOfType<TextBox>() is not null))
+            || sender is not Control renameButton
+            || renameButton.DataContext is not TodoItemViewModel todo)
         {
             return;
         }
@@ -245,6 +230,12 @@ public partial class MainWindow : Window
 
         Dispatcher.UIThread.Post(() =>
         {
+            var row = renameButton.FindAncestorOfType<Border>();
+            if (row is null)
+            {
+                return;
+            }
+
             var renameTextBox = row
                 .GetVisualDescendants()
                 .OfType<TextBox>()
@@ -396,7 +387,8 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (!IsWithinTextBox(sourceVisual))
+        if (!IsWithinTextBox(sourceVisual)
+            && !IsWithinClass(sourceVisual, "renameTodoButton"))
         {
             viewModel.CommitActiveRename();
         }
