@@ -85,7 +85,7 @@ public partial class MainWindow : Window
         {
             if (IsVisible && ShouldAutoHide())
             {
-                Hide();
+                Close();
             }
         };
     }

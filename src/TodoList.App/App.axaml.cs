@@ -5,6 +5,7 @@ using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using System;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using TodoList.App.Data;
@@ -16,7 +17,35 @@ namespace TodoList.App;
 
 public partial class App : Application
 {
+    private static readonly string[] AvailableGroupingOptions =
+    [
+        "None",
+        "Added day",
+        "Due date",
+        "Priority",
+    ];
+
+    private static readonly string[] AvailableOrderingOptions =
+    [
+        "Creation date",
+        "Due date",
+        "Priority",
+    ];
+
+    private static readonly string[] AvailableOrderingDirections =
+    [
+        "Descending",
+        "Ascending",
+    ];
+
     private MainWindow? _mainWindow;
+    private MainWindowViewModel? _mainWindowViewModel;
+    private JsonAppSettingsStore? _settingsStore;
+    private IClassicDesktopStyleApplicationLifetime? _desktop;
+    private string? _databasePath;
+    private AppUiSettings _initialSettings = new();
+    private EventHandler<AvaloniaPropertyChangedEventArgs>? _mainWindowPropertyChangedHandler;
+    private PropertyChangedEventHandler? _viewModelPropertyChangedHandler;
     private bool _isExitRequested;
 
     public override void Initialize()
@@ -33,40 +62,69 @@ public partial class App : Application
             DisableAvaloniaDataAnnotationValidation();
 
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            _desktop = desktop;
 
             var dataDirectory = BuildDataDirectory();
-            var databasePath = Path.Combine(dataDirectory, "todos.sqlite");
+            _databasePath = Path.Combine(dataDirectory, "todos.sqlite");
             var settingsPath = Path.Combine(dataDirectory, "settings.json");
 
-            var todoRepository = new SqliteTodoRepository(databasePath);
-            var settingsStore = new JsonAppSettingsStore(settingsPath);
-            var mainWindowViewModel = new MainWindowViewModel(todoRepository);
-            var appSettings = SanitizeSettings(settingsStore.Load(), mainWindowViewModel);
+            _settingsStore = new JsonAppSettingsStore(settingsPath);
+            _initialSettings = SanitizeSettings(_settingsStore.Load());
 
-            _mainWindow = new MainWindow
-            {
-                DataContext = mainWindowViewModel,
-                WidthPercent = appSettings.WidthPercent,
-            };
+            // Persist sanitized defaults even before the first panel open.
+            _settingsStore.Save(_initialSettings);
 
-            mainWindowViewModel.IsPinned = appSettings.IsPinned;
-            mainWindowViewModel.SelectedFilter = appSettings.SelectedFilter;
-            mainWindowViewModel.SelectedSmartView = appSettings.SelectedSmartView;
-            mainWindowViewModel.SelectedPriorityFilter = appSettings.SelectedPriorityFilter;
-            mainWindowViewModel.SelectedGroupingOption = appSettings.SelectedGroupingOption;
-            mainWindowViewModel.SelectedOrderingOption = appSettings.SelectedOrderingOption;
-            mainWindowViewModel.SelectedOrderingDirection = appSettings.SelectedOrderingDirection;
-
-            WireSettingsPersistence(_mainWindow, mainWindowViewModel, settingsStore, desktop);
-
-            _mainWindow.Closing += MainWindow_OnClosing;
-            desktop.MainWindow = _mainWindow;
-
-            // Start in the tray and only show the panel when requested.
-            desktop.Startup += (_, _) => _mainWindow.Hide();
+            desktop.Exit += (_, _) => SaveCurrentSettingsSnapshot();
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private static void ApplySettingsToViewModel(
+        MainWindowViewModel viewModel,
+        AppUiSettings settings)
+    {
+        viewModel.IsPinned = settings.IsPinned;
+        viewModel.SelectedFilter = settings.SelectedFilter;
+        viewModel.SelectedSmartView = settings.SelectedSmartView;
+        viewModel.SelectedPriorityFilter = settings.SelectedPriorityFilter;
+        viewModel.SelectedGroupingOption = settings.SelectedGroupingOption;
+        viewModel.SelectedOrderingOption = settings.SelectedOrderingOption;
+        viewModel.SelectedOrderingDirection = settings.SelectedOrderingDirection;
+    }
+
+    private void EnsureMainWindow()
+    {
+        if (_mainWindow is not null
+            || _settingsStore is null
+            || _desktop is null
+            || string.IsNullOrWhiteSpace(_databasePath))
+        {
+            return;
+        }
+
+        _mainWindowViewModel = CreateMainWindowViewModel(_databasePath, _initialSettings);
+
+        _mainWindow = new MainWindow
+        {
+            DataContext = _mainWindowViewModel,
+            WidthPercent = _initialSettings.WidthPercent,
+        };
+
+        WireSettingsPersistence(_mainWindow, _mainWindowViewModel);
+
+        _mainWindow.Closing += MainWindow_OnClosing;
+        _desktop.MainWindow = _mainWindow;
+    }
+
+    private static MainWindowViewModel CreateMainWindowViewModel(
+        string databasePath,
+        AppUiSettings settings)
+    {
+        var todoRepository = new SqliteTodoRepository(databasePath);
+        var viewModel = new MainWindowViewModel(todoRepository);
+        ApplySettingsToViewModel(viewModel, settings);
+        return viewModel;
     }
 
     private static string BuildDataDirectory()
@@ -80,31 +138,29 @@ public partial class App : Application
         return dataDirectory;
     }
 
-    private static AppUiSettings SanitizeSettings(
-        AppUiSettings settings,
-        MainWindowViewModel viewModel)
+    private static AppUiSettings SanitizeSettings(AppUiSettings settings)
     {
-        var defaultGroupingOption = viewModel.AvailableGroupingOptions.FirstOrDefault() ?? "None";
+        var defaultGroupingOption = AvailableGroupingOptions.First();
         var groupingOption = settings.SelectedGroupingOption;
-        var defaultOrderingOption = viewModel.AvailableOrderingOptions.FirstOrDefault() ?? "Creation date";
+        var defaultOrderingOption = AvailableOrderingOptions.First();
         var orderingOption = settings.SelectedOrderingOption;
-        var defaultOrderingDirection = viewModel.AvailableOrderingDirections.FirstOrDefault() ?? "Descending";
+        var defaultOrderingDirection = AvailableOrderingDirections.First();
         var orderingDirection = settings.SelectedOrderingDirection;
 
         if (string.IsNullOrWhiteSpace(groupingOption)
-            || !viewModel.AvailableGroupingOptions.Contains(groupingOption))
+            || !AvailableGroupingOptions.Contains(groupingOption))
         {
             groupingOption = defaultGroupingOption;
         }
 
         if (string.IsNullOrWhiteSpace(orderingOption)
-            || !viewModel.AvailableOrderingOptions.Contains(orderingOption))
+            || !AvailableOrderingOptions.Contains(orderingOption))
         {
             orderingOption = defaultOrderingOption;
         }
 
         if (string.IsNullOrWhiteSpace(orderingDirection)
-            || !viewModel.AvailableOrderingDirections.Contains(orderingDirection))
+            || !AvailableOrderingDirections.Contains(orderingDirection))
         {
             orderingDirection = defaultOrderingDirection;
         }
@@ -155,26 +211,20 @@ public partial class App : Application
         };
     }
 
-    private static void WireSettingsPersistence(
+    private void WireSettingsPersistence(
         MainWindow mainWindow,
-        MainWindowViewModel viewModel,
-        JsonAppSettingsStore settingsStore,
-        IClassicDesktopStyleApplicationLifetime desktop)
+        MainWindowViewModel viewModel)
     {
-        void SaveCurrentSettings()
-        {
-            settingsStore.Save(BuildCurrentSettingsSnapshot(mainWindow, viewModel));
-        }
-
-        mainWindow.PropertyChanged += (_, e) =>
+        _mainWindowPropertyChangedHandler = (_, e) =>
         {
             if (e.Property == MainWindow.WidthPercentProperty)
             {
-                SaveCurrentSettings();
+                SaveCurrentSettingsSnapshot();
             }
         };
+        mainWindow.PropertyChanged += _mainWindowPropertyChangedHandler;
 
-        viewModel.PropertyChanged += (_, e) =>
+        _viewModelPropertyChangedHandler = (_, e) =>
         {
             if (e.PropertyName is nameof(MainWindowViewModel.IsPinned)
                 or nameof(MainWindowViewModel.SelectedFilter)
@@ -184,14 +234,44 @@ public partial class App : Application
                 or nameof(MainWindowViewModel.SelectedOrderingOption)
                 or nameof(MainWindowViewModel.SelectedOrderingDirection))
             {
-                SaveCurrentSettings();
+                SaveCurrentSettingsSnapshot();
             }
         };
-
-        desktop.Exit += (_, _) => SaveCurrentSettings();
+        viewModel.PropertyChanged += _viewModelPropertyChangedHandler;
 
         // Ensure defaults or sanitized values are written even before first user interaction.
-        SaveCurrentSettings();
+        SaveCurrentSettingsSnapshot();
+    }
+
+    private void SaveCurrentSettingsSnapshot()
+    {
+        if (_settingsStore is null)
+        {
+            return;
+        }
+
+        if (_mainWindow is not null && _mainWindowViewModel is not null)
+        {
+            _initialSettings = BuildCurrentSettingsSnapshot(_mainWindow, _mainWindowViewModel);
+        }
+
+        _settingsStore.Save(_initialSettings);
+    }
+
+    private void DetachMainWindowPersistenceHandlers()
+    {
+        if (_mainWindow is not null && _mainWindowPropertyChangedHandler is not null)
+        {
+            _mainWindow.PropertyChanged -= _mainWindowPropertyChangedHandler;
+        }
+
+        if (_mainWindowViewModel is not null && _viewModelPropertyChangedHandler is not null)
+        {
+            _mainWindowViewModel.PropertyChanged -= _viewModelPropertyChangedHandler;
+        }
+
+        _mainWindowPropertyChangedHandler = null;
+        _viewModelPropertyChangedHandler = null;
     }
 
     private static (TodoFilter selectedFilter, TodoPriorityFilter selectedPriorityFilter)
@@ -248,19 +328,31 @@ public partial class App : Application
     {
         if (_isExitRequested)
         {
+            SaveCurrentSettingsSnapshot();
             return;
         }
 
-        e.Cancel = true;
+        SaveCurrentSettingsSnapshot();
+        DetachMainWindowPersistenceHandlers();
 
-        if (sender is Window window)
+        if (_mainWindow is not null)
         {
-            window.Hide();
+            _mainWindow.Closing -= MainWindow_OnClosing;
         }
+
+        if (_desktop is not null && ReferenceEquals(_desktop.MainWindow, _mainWindow))
+        {
+            _desktop.MainWindow = null;
+        }
+
+        _mainWindow = null;
+        _mainWindowViewModel = null;
     }
 
     private void ToggleMainWindowVisibility()
     {
+        EnsureMainWindow();
+
         if (_mainWindow is null)
         {
             return;
@@ -268,7 +360,7 @@ public partial class App : Application
 
         if (_mainWindow.IsVisible)
         {
-            _mainWindow.Hide();
+            _mainWindow.Close();
             return;
         }
 
