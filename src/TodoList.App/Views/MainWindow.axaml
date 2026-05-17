@@ -19,6 +19,177 @@
         Topmost="True"
         Title="Todo Side Panel">
 
+    <Window.Resources>
+        <DataTemplate x:Key="TodoItemTemplate" x:DataType="vm:TodoItemViewModel">
+            <Border Classes="todoRow groupedTodoRow"
+                    Classes.detailsExpanded="{Binding IsDetailsExpanded}"
+                    HorizontalAlignment="Stretch"
+                    Margin="4"
+                    Padding="12,9,12,12"
+                    Tapped="TodoItemRow_OnTapped">
+                <Grid ColumnDefinitions="Auto,*,Auto"
+                      RowDefinitions="Auto,Auto"
+                      ColumnSpacing="8"
+                      RowSpacing="6">
+                    <CheckBox Grid.Column="0"
+                              VerticalAlignment="Top"
+                              Margin="0,2,0,0"
+                              IsChecked="{Binding IsCompleted}"
+                              IsEnabled="{Binding CanToggleCompleted}"
+                              Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).ToggleCompletedCommand}"
+                              CommandParameter="{Binding}" />
+                    <StackPanel Grid.Column="1" Spacing="2">
+                        <StackPanel IsVisible="{Binding IsNotRenaming}" Spacing="2">
+                            <TextBlock Text="{Binding Title}"
+                                       VerticalAlignment="Center"
+                                       TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding PriorityLabel}"
+                                       Opacity="0.75"
+                                       FontSize="11" />
+                            <TextBlock Text="{Binding DueDateLabel}"
+                                       IsVisible="{Binding HasDueDate}"
+                                       Opacity="0.75"
+                                       FontSize="11" />
+                        </StackPanel>
+                        <TextBox IsVisible="{Binding IsRenaming}"
+                                 Text="{Binding RenameText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 LostFocus="TodoRenameTextBox_OnLostFocus">
+                            <TextBox.KeyBindings>
+                                <KeyBinding Gesture="Enter"
+                                            Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).CommitRenameTodoCommand}"
+                                            CommandParameter="{Binding}" />
+                                <KeyBinding Gesture="Escape"
+                                            Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).CancelRenameTodoCommand}"
+                                            CommandParameter="{Binding}" />
+                            </TextBox.KeyBindings>
+                        </TextBox>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2"
+                                Orientation="Horizontal"
+                                Spacing="6"
+                                VerticalAlignment="Top">
+                        <Button Width="28"
+                                Height="28"
+                                MinWidth="28"
+                                MinHeight="28"
+                                Padding="0"
+                                Classes="renameTodoButton"
+                                ToolTip.Tip="Rename"
+                                Click="TodoRenameButton_OnClick">
+                            <Path Width="12"
+                                  Height="12"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"
+                                  Stretch="Uniform"
+                                  Fill="#C4CAD3"
+                                  Data="M3,17.25V21H6.75L17.81,9.94L14.06,6.19L3,17.25M20.71,7.04C21.1,6.65 21.1,6.02 20.71,5.63L18.37,3.29C17.98,2.9 17.35,2.9 16.96,3.29L15.13,5.12L18.88,8.87L20.71,7.04Z" />
+                        </Button>
+                        <Button VerticalAlignment="Top"
+                                IsVisible="{Binding CanReject}"
+                                Content="Reject"
+                                Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).RejectTodoCommand}"
+                                CommandParameter="{Binding}" />
+                        <Button VerticalAlignment="Top"
+                                IsVisible="{Binding IsRejected}"
+                                Content="Restore"
+                                Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).RestoreTodoCommand}"
+                                CommandParameter="{Binding}" />
+                    </StackPanel>
+                    <Border Classes="todoDetailsPanel"
+                            Grid.Row="1"
+                            Grid.Column="1"
+                            Grid.ColumnSpan="2"
+                            IsVisible="{Binding IsDetailsExpanded}"
+                            CornerRadius="6"
+                            BorderThickness="1"
+                            BorderBrush="#4C5460"
+                            Background="#23262C"
+                            Padding="8">
+                        <StackPanel Spacing="6">
+                            <Grid ColumnDefinitions="Auto,Auto,*"
+                                  RowDefinitions="Auto,Auto"
+                                  ColumnSpacing="8"
+                                  RowSpacing="2">
+                                <TextBlock Grid.Column="0"
+                                           Grid.Row="0"
+                                           Text="Priority"
+                                           FontSize="11"
+                                           Opacity="0.8" />
+                                <ComboBox Grid.Column="0"
+                                          Grid.Row="1"
+                                          MinWidth="132"
+                                          ItemsSource="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).AvailablePriorities}"
+                                          SelectedItem="{Binding Priority}"
+                                          DropDownOpened="TodoPriorityComboBox_OnDropDownOpened"
+                                          DropDownClosed="TodoPriorityComboBox_OnDropDownClosed"
+                                          SelectionChanged="TodoPriorityComboBox_OnSelectionChanged" />
+                                <TextBlock Grid.Column="1"
+                                           Grid.Row="0"
+                                           Text="Created"
+                                           FontSize="11"
+                                           Opacity="0.8" />
+                                <TextBlock Grid.Column="1"
+                                           Grid.Row="1"
+                                           Text="{Binding CreatedAtLabel}"
+                                           VerticalAlignment="Center"
+                                           Opacity="0.9" />
+                            </Grid>
+                            <TextBlock Text="Due date"
+                                       FontSize="11"
+                                       Opacity="0.8" />
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
+                                <DatePicker Grid.Column="0"
+                                            MinWidth="0"
+                                            HorizontalAlignment="Stretch"
+                                            MonthFormat="MMM"
+                                            SelectedDate="{Binding DueAtUtc, Mode=TwoWay}"
+                                            SelectedDateChanged="TodoDueDatePicker_OnSelectedDateChanged"
+                                            LostFocus="TodoDueDatePicker_OnLostFocus" />
+                                <Button Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        Width="32"
+                                        Height="32"
+                                        MinWidth="32"
+                                        MinHeight="32"
+                                        Padding="0"
+                                        ToolTip.Tip="Clear due date"
+                                        Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).ClearTodoDueAtUtcCommand}"
+                                        CommandParameter="{Binding}">
+                                    <Path Width="12"
+                                          Height="12"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          Stretch="Uniform"
+                                          Fill="#C4CAD3"
+                                          Data="M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19M19,4H15.5L14.79,3.29C14.61,3.11 14.36,3 14.1,3H9.89C9.63,3 9.38,3.11 9.2,3.29L8.5,4H5V6H19V4Z" />
+                                </Button>
+                            </Grid>
+                            <TextBlock Text="Notes"
+                                       FontSize="11"
+                                       Opacity="0.8" />
+                            <TextBox MinHeight="72"
+                                     TextWrapping="Wrap"
+                                     AcceptsReturn="True"
+                                     VerticalContentAlignment="Top"
+                                     Watermark="Add notes..."
+                                     Text="{Binding Notes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     LostFocus="TodoNotesTextBox_OnLostFocus" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="TodoGroupTemplate" x:DataType="vm:TodoDayGroupViewModel">
+            <StackPanel Margin="0,0,0,10" Spacing="4">
+                <TextBlock Text="{Binding Header}"
+                           FontWeight="SemiBold"
+                           Margin="4,4,4,2" />
+                <ItemsControl ItemsSource="{Binding Items}" ItemTemplate="{StaticResource TodoItemTemplate}" />
+            </StackPanel>
+        </DataTemplate>
+    </Window.Resources>
+
     <Window.Styles>
         <Style Selector="Border.panelChrome">
             <Setter Property="Background" Value="#202225" />
@@ -214,346 +385,11 @@
                 <Border Grid.Row="1" Classes="todoListSurface" CornerRadius="8" BorderThickness="1">
                     <Grid RowDefinitions="*">
                         <ScrollViewer Classes="todoListContent" IsVisible="{Binding ShowFlatList}" Padding="6">
-                            <ItemsControl ItemsSource="{Binding VisibleTodos}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:TodoItemViewModel">
-                                        <Border Classes="todoRow groupedTodoRow"
-                                                Classes.detailsExpanded="{Binding IsDetailsExpanded}"
-                                                HorizontalAlignment="Stretch"
-                                                Margin="4"
-                                                Padding="12,9,12,12"
-                                            Tapped="TodoItemRow_OnTapped">
-                                            <Grid ColumnDefinitions="Auto,*,Auto"
-                                                  RowDefinitions="Auto,Auto"
-                                                  ColumnSpacing="8"
-                                                  RowSpacing="6">
-                                                <CheckBox Grid.Column="0"
-                                                          VerticalAlignment="Top"
-                                                          Margin="0,2,0,0"
-                                                          IsChecked="{Binding IsCompleted}"
-                                                          IsEnabled="{Binding CanToggleCompleted}"
-                                                          Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).ToggleCompletedCommand}"
-                                                          CommandParameter="{Binding}" />
-                                                <StackPanel Grid.Column="1" Spacing="2">
-                                                    <StackPanel IsVisible="{Binding IsNotRenaming}" Spacing="2">
-                                                        <TextBlock Text="{Binding Title}"
-                                                                   VerticalAlignment="Center"
-                                                                   TextWrapping="Wrap" />
-                                                        <TextBlock Text="{Binding PriorityLabel}"
-                                                                   Opacity="0.75"
-                                                                   FontSize="11" />
-                                                        <TextBlock Text="{Binding DueDateLabel}"
-                                                                   IsVisible="{Binding HasDueDate}"
-                                                                   Opacity="0.75"
-                                                                   FontSize="11" />
-                                                    </StackPanel>
-                                                    <TextBox IsVisible="{Binding IsRenaming}"
-                                                             Text="{Binding RenameText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                             LostFocus="TodoRenameTextBox_OnLostFocus">
-                                                        <TextBox.KeyBindings>
-                                                            <KeyBinding Gesture="Enter"
-                                                                        Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).CommitRenameTodoCommand}"
-                                                                        CommandParameter="{Binding}" />
-                                                            <KeyBinding Gesture="Escape"
-                                                                        Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).CancelRenameTodoCommand}"
-                                                                        CommandParameter="{Binding}" />
-                                                        </TextBox.KeyBindings>
-                                                    </TextBox>
-                                                </StackPanel>
-                                                <StackPanel Grid.Column="2"
-                                                        Orientation="Horizontal"
-                                                        Spacing="6"
-                                                        VerticalAlignment="Top">
-                                                    <Button Width="28"
-                                                        Height="28"
-                                                        MinWidth="28"
-                                                        MinHeight="28"
-                                                        Padding="0"
-                                                            Classes="renameTodoButton"
-                                                        ToolTip.Tip="Rename"
-                                                        Click="TodoRenameButton_OnClick">
-                                                    <Path Width="12"
-                                                          Height="12"
-                                                          HorizontalAlignment="Center"
-                                                          VerticalAlignment="Center"
-                                                          Stretch="Uniform"
-                                                          Fill="#C4CAD3"
-                                                          Data="M3,17.25V21H6.75L17.81,9.94L14.06,6.19L3,17.25M20.71,7.04C21.1,6.65 21.1,6.02 20.71,5.63L18.37,3.29C17.98,2.9 17.35,2.9 16.96,3.29L15.13,5.12L18.88,8.87L20.71,7.04Z" />
-                                                    </Button>
-                                                    <Button VerticalAlignment="Top"
-                                                        IsVisible="{Binding CanReject}"
-                                                        Content="Reject"
-                                                        Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).RejectTodoCommand}"
-                                                        CommandParameter="{Binding}" />
-                                                    <Button VerticalAlignment="Top"
-                                                        IsVisible="{Binding IsRejected}"
-                                                        Content="Restore"
-                                                        Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).RestoreTodoCommand}"
-                                                        CommandParameter="{Binding}" />
-                                                </StackPanel>
-                                                <Border Classes="todoDetailsPanel"
-                                                        Grid.Row="1"
-                                                        Grid.Column="1"
-                                                        Grid.ColumnSpan="2"
-                                                        IsVisible="{Binding IsDetailsExpanded}"
-                                                        CornerRadius="6"
-                                                        BorderThickness="1"
-                                                        BorderBrush="#4C5460"
-                                                        Background="#23262C"
-                                                        Padding="8">
-                                                    <StackPanel Spacing="6">
-                                                        <Grid ColumnDefinitions="Auto,Auto,*"
-                                                              RowDefinitions="Auto,Auto"
-                                                              ColumnSpacing="8"
-                                                              RowSpacing="2">
-                                                            <TextBlock Grid.Column="0"
-                                                                       Grid.Row="0"
-                                                                       Text="Priority"
-                                                                       FontSize="11"
-                                                                       Opacity="0.8" />
-                                                            <ComboBox Grid.Column="0"
-                                                                      Grid.Row="1"
-                                                                      MinWidth="132"
-                                                                      ItemsSource="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).AvailablePriorities}"
-                                                                      SelectedItem="{Binding Priority}"
-                                                                      DropDownOpened="TodoPriorityComboBox_OnDropDownOpened"
-                                                                      DropDownClosed="TodoPriorityComboBox_OnDropDownClosed"
-                                                                      SelectionChanged="TodoPriorityComboBox_OnSelectionChanged" />
-                                                            <TextBlock Grid.Column="1"
-                                                                       Grid.Row="0"
-                                                                       Text="Created"
-                                                                       FontSize="11"
-                                                                       Opacity="0.8" />
-                                                            <TextBlock Grid.Column="1"
-                                                                       Grid.Row="1"
-                                                                       Text="{Binding CreatedAtLabel}"
-                                                                       VerticalAlignment="Center"
-                                                                       Opacity="0.9" />
-                                                        </Grid>
-                                                        <TextBlock Text="Due date"
-                                                                   FontSize="11"
-                                                                   Opacity="0.8" />
-                                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
-                                                            <DatePicker Grid.Column="0"
-                                                                        MinWidth="0"
-                                                                        HorizontalAlignment="Stretch"
-                                                                        MonthFormat="MMM"
-                                                                        SelectedDate="{Binding DueAtUtc, Mode=TwoWay}"
-                                                                        SelectedDateChanged="TodoDueDatePicker_OnSelectedDateChanged"
-                                                                        LostFocus="TodoDueDatePicker_OnLostFocus" />
-                                                            <Button Grid.Column="1"
-                                                                    VerticalAlignment="Center"
-                                                                    Width="32"
-                                                                    Height="32"
-                                                                    MinWidth="32"
-                                                                    MinHeight="32"
-                                                                    Padding="0"
-                                                                    ToolTip.Tip="Clear due date"
-                                                                    Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).ClearTodoDueAtUtcCommand}"
-                                                                    CommandParameter="{Binding}">
-                                                                <Path Width="12"
-                                                                      Height="12"
-                                                                      HorizontalAlignment="Center"
-                                                                      VerticalAlignment="Center"
-                                                                      Stretch="Uniform"
-                                                                      Fill="#C4CAD3"
-                                                                      Data="M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19M19,4H15.5L14.79,3.29C14.61,3.11 14.36,3 14.1,3H9.89C9.63,3 9.38,3.11 9.2,3.29L8.5,4H5V6H19V4Z" />
-                                                            </Button>
-                                                        </Grid>
-                                                        <TextBlock Text="Notes"
-                                                                   FontSize="11"
-                                                                   Opacity="0.8" />
-                                                        <TextBox MinHeight="72"
-                                                                 TextWrapping="Wrap"
-                                                                 AcceptsReturn="True"
-                                                                 VerticalContentAlignment="Top"
-                                                                 Watermark="Add notes..."
-                                                                 Text="{Binding Notes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                 LostFocus="TodoNotesTextBox_OnLostFocus" />
-                                                    </StackPanel>
-                                                </Border>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                            <ItemsControl ItemsSource="{Binding VisibleTodos}" ItemTemplate="{StaticResource TodoItemTemplate}" />
                         </ScrollViewer>
 
                         <ScrollViewer Classes="todoListContent" IsVisible="{Binding ShowGroupedList}" Padding="6">
-                            <ItemsControl ItemsSource="{Binding VisibleTodoGroups}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:TodoDayGroupViewModel">
-                                        <StackPanel Margin="0,0,0,10" Spacing="4">
-                                            <TextBlock Text="{Binding Header}"
-                                                       FontWeight="SemiBold"
-                                                       Margin="4,4,4,2" />
-                                            <ItemsControl ItemsSource="{Binding Items}">
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate x:DataType="vm:TodoItemViewModel">
-                                                        <Border Classes="todoRow groupedTodoRow"
-                                                                Classes.detailsExpanded="{Binding IsDetailsExpanded}"
-                                                            HorizontalAlignment="Stretch"
-                                                                Margin="4"
-                                                                Padding="12,9,12,12"
-                                                                Tapped="TodoItemRow_OnTapped">
-                                                            <Grid ColumnDefinitions="Auto,*,Auto"
-                                                                  RowDefinitions="Auto,Auto"
-                                                                  ColumnSpacing="8"
-                                                                  RowSpacing="6">
-                                                                <CheckBox Grid.Column="0"
-                                                                          VerticalAlignment="Top"
-                                                                          Margin="0,2,0,0"
-                                                                          IsChecked="{Binding IsCompleted}"
-                                                                          IsEnabled="{Binding CanToggleCompleted}"
-                                                                          Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).ToggleCompletedCommand}"
-                                                                          CommandParameter="{Binding}" />
-                                                                <StackPanel Grid.Column="1" Spacing="2">
-                                                                    <StackPanel IsVisible="{Binding IsNotRenaming}" Spacing="2">
-                                                                        <TextBlock Text="{Binding Title}"
-                                                                                   VerticalAlignment="Center"
-                                                                                   TextWrapping="Wrap" />
-                                                                        <TextBlock Text="{Binding PriorityLabel}"
-                                                                                   Opacity="0.75"
-                                                                                   FontSize="11" />
-                                                                        <TextBlock Text="{Binding DueDateLabel}"
-                                                                                   IsVisible="{Binding HasDueDate}"
-                                                                                   Opacity="0.75"
-                                                                                   FontSize="11" />
-                                                                    </StackPanel>
-                                                                    <TextBox IsVisible="{Binding IsRenaming}"
-                                                                             Text="{Binding RenameText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                             LostFocus="TodoRenameTextBox_OnLostFocus">
-                                                                        <TextBox.KeyBindings>
-                                                                            <KeyBinding Gesture="Enter"
-                                                                                        Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).CommitRenameTodoCommand}"
-                                                                                        CommandParameter="{Binding}" />
-                                                                            <KeyBinding Gesture="Escape"
-                                                                                        Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).CancelRenameTodoCommand}"
-                                                                                        CommandParameter="{Binding}" />
-                                                                        </TextBox.KeyBindings>
-                                                                    </TextBox>
-                                                                </StackPanel>
-                                                                <StackPanel Grid.Column="2"
-                                                                        Orientation="Horizontal"
-                                                                        Spacing="6"
-                                                                        VerticalAlignment="Top">
-                                                                    <Button Width="28"
-                                                                        Height="28"
-                                                                        MinWidth="28"
-                                                                        MinHeight="28"
-                                                                        Padding="0"
-                                                                            Classes="renameTodoButton"
-                                                                        ToolTip.Tip="Rename"
-                                                                        Click="TodoRenameButton_OnClick">
-                                                                    <Path Width="12"
-                                                                          Height="12"
-                                                                          HorizontalAlignment="Center"
-                                                                          VerticalAlignment="Center"
-                                                                          Stretch="Uniform"
-                                                                          Fill="#C4CAD3"
-                                                                          Data="M3,17.25V21H6.75L17.81,9.94L14.06,6.19L3,17.25M20.71,7.04C21.1,6.65 21.1,6.02 20.71,5.63L18.37,3.29C17.98,2.9 17.35,2.9 16.96,3.29L15.13,5.12L18.88,8.87L20.71,7.04Z" />
-                                                                    </Button>
-                                                                    <Button VerticalAlignment="Top"
-                                                                        IsVisible="{Binding CanReject}"
-                                                                        Content="Reject"
-                                                                        Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).RejectTodoCommand}"
-                                                                        CommandParameter="{Binding}" />
-                                                                    <Button VerticalAlignment="Top"
-                                                                        IsVisible="{Binding IsRejected}"
-                                                                        Content="Restore"
-                                                                        Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).RestoreTodoCommand}"
-                                                                        CommandParameter="{Binding}" />
-                                                                </StackPanel>
-                                                                <Border Classes="todoDetailsPanel"
-                                                                        Grid.Row="1"
-                                                                        Grid.Column="1"
-                                                                        Grid.ColumnSpan="2"
-                                                                        IsVisible="{Binding IsDetailsExpanded}"
-                                                                        CornerRadius="6"
-                                                                        BorderThickness="1"
-                                                                        BorderBrush="#4C5460"
-                                                                        Background="#23262C"
-                                                                        Padding="8">
-                                                                    <StackPanel Spacing="6">
-                                                                        <Grid ColumnDefinitions="Auto,Auto,*"
-                                                                              RowDefinitions="Auto,Auto"
-                                                                              ColumnSpacing="8"
-                                                                              RowSpacing="2">
-                                                                            <TextBlock Grid.Column="0"
-                                                                                       Grid.Row="0"
-                                                                                       Text="Priority"
-                                                                                       FontSize="11"
-                                                                                       Opacity="0.8" />
-                                                                            <ComboBox Grid.Column="0"
-                                                                                      Grid.Row="1"
-                                                                                      MinWidth="132"
-                                                                                      ItemsSource="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).AvailablePriorities}"
-                                                                                      SelectedItem="{Binding Priority}"
-                                                                                      DropDownOpened="TodoPriorityComboBox_OnDropDownOpened"
-                                                                                      DropDownClosed="TodoPriorityComboBox_OnDropDownClosed"
-                                                                                      SelectionChanged="TodoPriorityComboBox_OnSelectionChanged" />
-                                                                            <TextBlock Grid.Column="1"
-                                                                                       Grid.Row="0"
-                                                                                       Text="Created"
-                                                                                       FontSize="11"
-                                                                                       Opacity="0.8" />
-                                                                            <TextBlock Grid.Column="1"
-                                                                                       Grid.Row="1"
-                                                                                       Text="{Binding CreatedAtLabel}"
-                                                                                       VerticalAlignment="Center"
-                                                                                       Opacity="0.9" />
-                                                                        </Grid>
-                                                                        <TextBlock Text="Due date"
-                                                                                   FontSize="11"
-                                                                                   Opacity="0.8" />
-                                                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
-                                                                            <DatePicker Grid.Column="0"
-                                                                                        MinWidth="0"
-                                                                                        HorizontalAlignment="Stretch"
-                                                                                        MonthFormat="MMM"
-                                                                                        SelectedDate="{Binding DueAtUtc, Mode=TwoWay}"
-                                                                                        SelectedDateChanged="TodoDueDatePicker_OnSelectedDateChanged"
-                                                                                        LostFocus="TodoDueDatePicker_OnLostFocus" />
-                                                                            <Button Grid.Column="1"
-                                                                                    VerticalAlignment="Center"
-                                                                                    Width="32"
-                                                                                    Height="32"
-                                                                                    MinWidth="32"
-                                                                                    MinHeight="32"
-                                                                                    Padding="0"
-                                                                                    ToolTip.Tip="Clear due date"
-                                                                                    Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).ClearTodoDueAtUtcCommand}"
-                                                                                    CommandParameter="{Binding}">
-                                                                                <Path Width="12"
-                                                                                      Height="12"
-                                                                                      HorizontalAlignment="Center"
-                                                                                      VerticalAlignment="Center"
-                                                                                      Stretch="Uniform"
-                                                                                      Fill="#C4CAD3"
-                                                                                      Data="M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19M19,4H15.5L14.79,3.29C14.61,3.11 14.36,3 14.1,3H9.89C9.63,3 9.38,3.11 9.2,3.29L8.5,4H5V6H19V4Z" />
-                                                                            </Button>
-                                                                        </Grid>
-                                                                        <TextBlock Text="Notes"
-                                                                                   FontSize="11"
-                                                                                   Opacity="0.8" />
-                                                                        <TextBox MinHeight="72"
-                                                                                 TextWrapping="Wrap"
-                                                                                 AcceptsReturn="True"
-                                                                                 VerticalContentAlignment="Top"
-                                                                                 Watermark="Add notes..."
-                                                                                 Text="{Binding Notes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                                 LostFocus="TodoNotesTextBox_OnLostFocus" />
-                                                                    </StackPanel>
-                                                                </Border>
-                                                            </Grid>
-                                                        </Border>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                            <ItemsControl ItemsSource="{Binding VisibleTodoGroups}" ItemTemplate="{StaticResource TodoGroupTemplate}" />
                         </ScrollViewer>
                     </Grid>
                 </Border>
