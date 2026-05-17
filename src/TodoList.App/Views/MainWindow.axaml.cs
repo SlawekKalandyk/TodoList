@@ -318,20 +318,7 @@ public partial class MainWindow : Window
         viewModel.SaveTodoNotesCommand.Execute(todo);
     }
 
-    private void TodoDueDatePicker_OnLostFocus(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is not MainWindowViewModel viewModel
-            || sender is not Control control
-            || control.DataContext is not TodoItemViewModel todo)
-        {
-            return;
-        }
-
-        viewModel.SaveTodoDueAtUtcCommand.Execute(todo);
-        viewModel.ReapplyOrderingIfNeeded();
-    }
-
-    private void TodoDueDatePicker_OnSelectedDateChanged(object? sender, DatePickerSelectedValueChangedEventArgs e)
+    private void TodoDueDatePicker_OnSelectedDateChanged(object? sender, DatePickerSelectedValueChangedEventArgs _)
     {
         if (DataContext is not MainWindowViewModel viewModel
             || sender is not DatePicker datePicker

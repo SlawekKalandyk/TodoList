@@ -418,6 +418,11 @@ public partial class MainWindowViewModel : ViewModelBase
         var normalizedDueAtUtc = todo.DueAtUtc?.ToUniversalTime();
 
         _todoRepository.UpdateDueAtUtc(todo.Id, normalizedDueAtUtc);
+
+        if (OrderByDueDate || GroupByDueDate)
+        {
+            ApplyFilter();
+        }
     }
 
     [RelayCommand]
@@ -497,14 +502,6 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         CommitRenameTodo(activeRenameTodo);
-    }
-
-    public void ReapplyOrderingIfNeeded()
-    {
-        if (OrderByDueDate || GroupByDueDate)
-        {
-            ApplyFilter();
-        }
     }
 
     private void LoadTodos()

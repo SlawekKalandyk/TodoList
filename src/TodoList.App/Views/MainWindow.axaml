@@ -143,8 +143,7 @@
                                             HorizontalAlignment="Stretch"
                                             MonthFormat="MMM"
                                             SelectedDate="{Binding DueAtUtc, Mode=TwoWay}"
-                                            SelectedDateChanged="TodoDueDatePicker_OnSelectedDateChanged"
-                                            LostFocus="TodoDueDatePicker_OnLostFocus" />
+                                        SelectedDateChanged="TodoDueDatePicker_OnSelectedDateChanged" />
                                 <Button Grid.Column="1"
                                         VerticalAlignment="Center"
                                         Width="32"
