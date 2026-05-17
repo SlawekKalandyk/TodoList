@@ -13,7 +13,9 @@ public partial class MainWindowViewModel : ViewModelBase
 {
     private const string NoGroupingOption = "None";
     private const string GroupByDayAddedOption = "Added day";
+    private const string GroupByDueDateOption = "Due date";
     private const string GroupByPriorityOption = "Priority";
+    private const string NoDueDateGroupHeader = "No due date";
     private const string NoOrderingOption = "None";
     private const string OrderByDueDateOption = "Due date";
     private const string OrderingDirectionDescendingOption = "Descending";
@@ -55,6 +57,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [
         NoGroupingOption,
         GroupByDayAddedOption,
+        GroupByDueDateOption,
         GroupByPriorityOption,
     ];
 
@@ -106,10 +109,13 @@ public partial class MainWindowViewModel : ViewModelBase
     public bool GroupByDayAdded =>
         string.Equals(SelectedGroupingOption, GroupByDayAddedOption, StringComparison.Ordinal);
 
+    public bool GroupByDueDate =>
+        string.Equals(SelectedGroupingOption, GroupByDueDateOption, StringComparison.Ordinal);
+
     public bool GroupByPriority =>
         string.Equals(SelectedGroupingOption, GroupByPriorityOption, StringComparison.Ordinal);
 
-    public bool ShowFlatList => !GroupByDayAdded && !GroupByPriority;
+    public bool ShowFlatList => !GroupByDayAdded && !GroupByDueDate && !GroupByPriority;
 
     public bool ShowGroupedList => !ShowFlatList;
 
@@ -156,6 +162,7 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnSelectedGroupingOptionChanged(string value)
     {
         OnPropertyChanged(nameof(GroupByDayAdded));
+        OnPropertyChanged(nameof(GroupByDueDate));
         OnPropertyChanged(nameof(GroupByPriority));
         OnPropertyChanged(nameof(ShowFlatList));
         OnPropertyChanged(nameof(ShowGroupedList));
@@ -333,7 +340,7 @@ public partial class MainWindowViewModel : ViewModelBase
         todo.DueAtUtc = null;
         _todoRepository.UpdateDueAtUtc(todo.Id, null);
 
-        if (OrderByDueDate)
+        if (OrderByDueDate || GroupByDueDate)
         {
             ApplyFilter();
         }
@@ -398,7 +405,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public void ReapplyOrderingIfNeeded()
     {
-        if (OrderByDueDate)
+        if (OrderByDueDate || GroupByDueDate)
         {
             ApplyFilter();
         }
@@ -489,6 +496,12 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
+        if (GroupByDueDate)
+        {
+            RebuildDueDateGroups(todos);
+            return;
+        }
+
         if (GroupByPriority)
         {
             RebuildPriorityGroups(todos);
@@ -530,6 +543,33 @@ public partial class MainWindowViewModel : ViewModelBase
                 new TodoDayGroupViewModel(
                     BuildPriorityHeader(priorityGroup.Key),
                     ApplyOrderingWithinGroup(priorityGroup)));
+        }
+    }
+
+    private void RebuildDueDateGroups(IReadOnlyList<TodoItemViewModel> todos)
+    {
+        VisibleTodoGroups.Clear();
+
+        var groupedTodos = todos.GroupBy(todo => todo.DueAtUtc?.Date);
+
+        var orderedGroups = OrderDirectionAscending
+            ? groupedTodos
+                .OrderBy(group => group.Key.HasValue ? 0 : 1)
+                .ThenBy(group => group.Key ?? DateTime.MaxValue)
+            : groupedTodos
+                .OrderBy(group => group.Key.HasValue ? 0 : 1)
+                .ThenByDescending(group => group.Key ?? DateTime.MinValue);
+
+        foreach (var dueDateGroup in orderedGroups)
+        {
+            var header = dueDateGroup.Key.HasValue
+                ? BuildDueDateHeader(dueDateGroup.Key.Value)
+                : NoDueDateGroupHeader;
+
+            VisibleTodoGroups.Add(
+                new TodoDayGroupViewModel(
+                    header,
+                    ApplyOrderingWithinGroup(dueDateGroup)));
         }
     }
 
@@ -594,6 +634,27 @@ public partial class MainWindowViewModel : ViewModelBase
     private static string BuildPriorityHeader(TodoPriority priority)
     {
         return priority.ToString();
+    }
+
+    private static string BuildDueDateHeader(DateTime localDate)
+    {
+        var today = DateTime.Now.Date;
+        if (localDate == today)
+        {
+            return "Today";
+        }
+
+        if (localDate == today.AddDays(1))
+        {
+            return "Tomorrow";
+        }
+
+        if (localDate == today.AddDays(-1))
+        {
+            return "Yesterday";
+        }
+
+        return localDate.ToString("dddd, dd MMM yyyy");
     }
 }
 
