@@ -22,6 +22,8 @@ public sealed partial class TodoItemViewModel : ObservableObject
 
     public string DueDateLabel => DueAtUtc?.ToLocalTime().ToString("dd MMM yyyy") ?? string.Empty;
 
+    public string CreatedAtLabel => CreatedAtUtc.ToLocalTime().ToString("dd MMM yyyy HH:mm");
+
     [ObservableProperty]
     private string title;
 

@@ -19,6 +19,8 @@ public partial class MainWindowViewModel : ViewModelBase
     private const string NoDueDateGroupHeader = "No due date";
     private const string NoOrderingOption = "None";
     private const string OrderByDueDateOption = "Due date";
+    private const string OrderByCreationDateOption = "Creation date";
+    private const string OrderByPriorityOption = "Priority";
     private const string OrderingDirectionDescendingOption = "Descending";
     private const string OrderingDirectionAscendingOption = "Ascending";
     private static readonly TimeSpan SearchDebounceDelay = TimeSpan.FromMilliseconds(200);
@@ -76,6 +78,8 @@ public partial class MainWindowViewModel : ViewModelBase
     [
         NoOrderingOption,
         OrderByDueDateOption,
+        OrderByCreationDateOption,
+        OrderByPriorityOption,
     ];
 
     public IReadOnlyList<string> AvailableOrderingDirections { get; } =
@@ -141,6 +145,12 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public bool OrderByDueDate =>
         string.Equals(SelectedOrderingOption, OrderByDueDateOption, StringComparison.Ordinal);
+
+    public bool OrderByCreationDate =>
+        string.Equals(SelectedOrderingOption, OrderByCreationDateOption, StringComparison.Ordinal);
+
+    public bool OrderByPriority =>
+        string.Equals(SelectedOrderingOption, OrderByPriorityOption, StringComparison.Ordinal);
 
     public bool OrderDirectionAscending =>
         string.Equals(SelectedOrderingDirection, OrderingDirectionAscendingOption, StringComparison.Ordinal);
@@ -682,12 +692,22 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private IEnumerable<TodoItemViewModel> ApplySelectedOrdering(IEnumerable<TodoItemViewModel> todos)
     {
-        if (!OrderByDueDate)
+        if (OrderByDueDate)
         {
-            return todos;
+            return OrderByDueDateThenFallback(todos, OrderDirectionAscending);
         }
 
-        return OrderByDueDateThenFallback(todos, OrderDirectionAscending);
+        if (OrderByCreationDate)
+        {
+            return OrderByCreatedAtThenId(todos, OrderDirectionAscending);
+        }
+
+        if (OrderByPriority)
+        {
+            return OrderByPriorityThenFallback(todos, OrderDirectionAscending);
+        }
+
+        return todos;
     }
 
     private IEnumerable<TodoItemViewModel> ApplyOrderingWithinGroup(IEnumerable<TodoItemViewModel> todos)
@@ -697,8 +717,52 @@ public partial class MainWindowViewModel : ViewModelBase
             return OrderByDueDateThenFallback(todos, OrderDirectionAscending);
         }
 
+        if (OrderByCreationDate)
+        {
+            return OrderByCreatedAtThenId(todos, OrderDirectionAscending);
+        }
+
+        if (OrderByPriority)
+        {
+            return OrderByPriorityThenFallback(todos, OrderDirectionAscending);
+        }
+
         return todos
             .OrderByDescending(todo => todo.CreatedAtUtc)
+            .ThenByDescending(todo => todo.Id);
+    }
+
+    private static IEnumerable<TodoItemViewModel> OrderByCreatedAtThenId(
+        IEnumerable<TodoItemViewModel> todos,
+        bool ascending)
+    {
+        if (ascending)
+        {
+            return todos
+                .OrderBy(todo => todo.CreatedAtUtc)
+                .ThenBy(todo => todo.Id);
+        }
+
+        return todos
+            .OrderByDescending(todo => todo.CreatedAtUtc)
+            .ThenByDescending(todo => todo.Id);
+    }
+
+    private static IEnumerable<TodoItemViewModel> OrderByPriorityThenFallback(
+        IEnumerable<TodoItemViewModel> todos,
+        bool ascending)
+    {
+        if (ascending)
+        {
+            return todos
+                .OrderBy(todo => todo.Priority)
+                .ThenByDescending(todo => todo.CreatedAtUtc)
+                .ThenByDescending(todo => todo.Id);
+        }
+
+        return todos
+            .OrderByDescending(todo => todo.Priority)
+            .ThenByDescending(todo => todo.CreatedAtUtc)
             .ThenByDescending(todo => todo.Id);
     }
 
