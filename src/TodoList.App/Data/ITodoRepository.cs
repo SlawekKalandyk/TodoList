@@ -11,6 +11,8 @@ public interface ITodoRepository
 
     void Rename(long id, string title);
 
+    void UpdateNotes(long id, string notes);
+
     void SetCompleted(long id, bool isCompleted);
 
     void Reject(long id);

@@ -18,6 +18,9 @@ public sealed partial class TodoItemViewModel : ObservableObject
     private string title;
 
     [ObservableProperty]
+    private string notes;
+
+    [ObservableProperty]
     private bool isCompleted;
 
     [ObservableProperty]
@@ -29,6 +32,9 @@ public sealed partial class TodoItemViewModel : ObservableObject
     [ObservableProperty]
     private string renameText;
 
+    [ObservableProperty]
+    private bool isDetailsExpanded;
+
     public bool CanReject => !IsRejected;
 
     public bool IsNotRenaming => !IsRenaming;
@@ -36,6 +42,7 @@ public sealed partial class TodoItemViewModel : ObservableObject
     public TodoItemViewModel(
         long id,
         string title,
+        string notes,
         TodoPriority priority,
         bool isCompleted,
         bool isRejected,
@@ -45,6 +52,7 @@ public sealed partial class TodoItemViewModel : ObservableObject
         CreatedAtUtc = createdAtUtc;
         Priority = priority;
         this.title = title;
+        this.notes = notes ?? string.Empty;
         this.isCompleted = isCompleted;
         this.isRejected = isRejected;
         renameText = title;
@@ -55,6 +63,7 @@ public sealed partial class TodoItemViewModel : ObservableObject
         return new TodoItemViewModel(
             todo.Id,
             todo.Title,
+            todo.Notes,
             todo.Priority,
             todo.IsCompleted,
             todo.IsRejected,

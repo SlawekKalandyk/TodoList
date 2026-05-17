@@ -40,7 +40,7 @@ public sealed class SqliteTodoRepository : ITodoRepository
         using var command = connection.CreateCommand();
         command.CommandText =
             """
-            SELECT Id, Title, Priority, IsCompleted, IsRejected, CreatedAtUtc, CompletedAtUtc
+            SELECT Id, Title, Notes, Priority, IsCompleted, IsRejected, CreatedAtUtc, CompletedAtUtc
             FROM Todos
             ORDER BY IsRejected ASC, IsCompleted ASC, Priority DESC, CreatedAtUtc DESC, Id DESC;
             """;
@@ -48,16 +48,17 @@ public sealed class SqliteTodoRepository : ITodoRepository
         using var reader = command.ExecuteReader();
         while (reader.Read())
         {
-            var completedAtUnix = reader.IsDBNull(6) ? (long?)null : reader.GetInt64(6);
+            var completedAtUnix = reader.IsDBNull(7) ? (long?)null : reader.GetInt64(7);
 
             todos.Add(new TodoItem
             {
                 Id = reader.GetInt64(0),
                 Title = reader.GetString(1),
-                Priority = ToPriority(reader.GetInt64(2)),
-                IsCompleted = reader.GetInt64(3) == 1,
-                IsRejected = reader.GetInt64(4) == 1,
-                CreatedAtUtc = DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(5)),
+                Notes = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
+                Priority = ToPriority(reader.GetInt64(3)),
+                IsCompleted = reader.GetInt64(4) == 1,
+                IsRejected = reader.GetInt64(5) == 1,
+                CreatedAtUtc = DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(6)),
                 CompletedAtUtc = completedAtUnix.HasValue
                     ? DateTimeOffset.FromUnixTimeSeconds(completedAtUnix.Value)
                     : null,
@@ -80,8 +81,8 @@ public sealed class SqliteTodoRepository : ITodoRepository
         using var command = connection.CreateCommand();
         command.CommandText =
             """
-            INSERT INTO Todos (Title, Priority, IsCompleted, IsRejected, CreatedAtUtc, CompletedAtUtc)
-            VALUES ($title, $priority, 0, 0, $createdAtUtc, NULL);
+            INSERT INTO Todos (Title, Notes, Priority, IsCompleted, IsRejected, CreatedAtUtc, CompletedAtUtc)
+            VALUES ($title, '', $priority, 0, 0, $createdAtUtc, NULL);
             SELECT last_insert_rowid();
             """;
 
@@ -111,6 +112,22 @@ public sealed class SqliteTodoRepository : ITodoRepository
 
         command.Parameters.AddWithValue("$id", id);
         command.Parameters.AddWithValue("$title", title.Trim());
+        command.ExecuteNonQuery();
+    }
+
+    public void UpdateNotes(long id, string notes)
+    {
+        using var connection = OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            UPDATE Todos
+            SET Notes = $notes
+            WHERE Id = $id;
+            """;
+
+        command.Parameters.AddWithValue("$id", id);
+        command.Parameters.AddWithValue("$notes", notes ?? string.Empty);
         command.ExecuteNonQuery();
     }
 
@@ -197,6 +214,7 @@ public sealed class SqliteTodoRepository : ITodoRepository
             (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 Title TEXT NOT NULL,
+                Notes TEXT NOT NULL DEFAULT '',
                 Priority INTEGER NOT NULL DEFAULT 1,
                 IsCompleted INTEGER NOT NULL DEFAULT 0,
                 IsRejected INTEGER NOT NULL DEFAULT 0,
@@ -224,6 +242,12 @@ public sealed class SqliteTodoRepository : ITodoRepository
             tableName: "Todos",
             columnName: "Priority",
             alterStatement: "ALTER TABLE Todos ADD COLUMN Priority INTEGER NOT NULL DEFAULT 1;");
+
+        EnsureColumnExists(
+            connection,
+            tableName: "Todos",
+            columnName: "Notes",
+            alterStatement: "ALTER TABLE Todos ADD COLUMN Notes TEXT NOT NULL DEFAULT '';");
     }
 
     private static TodoPriority ToPriority(long rawValue)

@@ -104,7 +104,7 @@ public partial class App : Application
 
         return new AppUiSettings
         {
-            WidthPercent = Math.Clamp(settings.WidthPercent, 50m, 200m),
+            WidthPercent = Math.Clamp(settings.WidthPercent, 80m, 200m),
             IsPinned = settings.IsPinned,
             SelectedFilter = selectedFilter,
             SelectedPriorityFilter = selectedPriorityFilter,
@@ -118,7 +118,7 @@ public partial class App : Application
     {
         return new AppUiSettings
         {
-            WidthPercent = Math.Clamp(mainWindow.WidthPercent, 50m, 200m),
+            WidthPercent = Math.Clamp(mainWindow.WidthPercent, 80m, 200m),
             IsPinned = viewModel.IsPinned,
             SelectedFilter = viewModel.SelectedFilter,
             SelectedPriorityFilter = viewModel.SelectedPriorityFilter,

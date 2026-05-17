@@ -222,6 +222,50 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void ToggleTodoDetails(TodoItemViewModel? todo)
+    {
+        if (todo is null)
+        {
+            return;
+        }
+
+        var shouldExpand = !todo.IsDetailsExpanded;
+
+        foreach (var item in _allTodos)
+        {
+            if (!ReferenceEquals(item, todo) && item.IsDetailsExpanded)
+            {
+                item.IsDetailsExpanded = false;
+            }
+        }
+
+        todo.IsDetailsExpanded = shouldExpand;
+    }
+
+    [RelayCommand]
+    private void SaveTodoNotes(TodoItemViewModel? todo)
+    {
+        if (todo is null)
+        {
+            return;
+        }
+
+        _todoRepository.UpdateNotes(todo.Id, todo.Notes ?? string.Empty);
+    }
+
+    [RelayCommand]
+    private void CollapseTodoDetails()
+    {
+        foreach (var item in _allTodos)
+        {
+            if (item.IsDetailsExpanded)
+            {
+                item.IsDetailsExpanded = false;
+            }
+        }
+    }
+
+    [RelayCommand]
     private void CommitRenameTodo(TodoItemViewModel? todo)
     {
         if (todo is null || !todo.IsRenaming)
@@ -253,6 +297,17 @@ public partial class MainWindowViewModel : ViewModelBase
     private void CancelRenameTodo(TodoItemViewModel? todo)
     {
         todo?.CancelRename();
+    }
+
+    public void CommitActiveRename()
+    {
+        var activeRenameTodo = _allTodos.FirstOrDefault(todo => todo.IsRenaming);
+        if (activeRenameTodo is null)
+        {
+            return;
+        }
+
+        CommitRenameTodo(activeRenameTodo);
     }
 
     private void LoadTodos()
