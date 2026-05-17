@@ -155,6 +155,8 @@ public partial class MainWindowViewModel : ViewModelBase
     public bool OrderDirectionAscending =>
         string.Equals(SelectedOrderingDirection, OrderingDirectionAscendingOption, StringComparison.Ordinal);
 
+    public bool OrderDirectionDescending => !OrderDirectionAscending;
+
     public string SummaryText =>
         $"{ActiveCount} active - {CompletedCount} completed - {RejectedCount} rejected";
 
@@ -240,6 +242,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
     partial void OnSelectedOrderingDirectionChanged(string value)
     {
+        OnPropertyChanged(nameof(OrderDirectionAscending));
+        OnPropertyChanged(nameof(OrderDirectionDescending));
         ApplyFilter();
     }
 
@@ -266,6 +270,25 @@ public partial class MainWindowViewModel : ViewModelBase
             _searchDebounceTimer.Stop();
             ApplyFilter();
         }
+    }
+
+    [RelayCommand]
+    private void ClearGeneralFilters()
+    {
+        SelectedSmartView = TodoSmartView.None;
+        SelectedFilter = TodoFilter.Active;
+        SelectedPriorityFilter = TodoPriorityFilter.All;
+        SelectedGroupingOption = NoGroupingOption;
+        SelectedOrderingOption = NoOrderingOption;
+        SelectedOrderingDirection = OrderingDirectionDescendingOption;
+    }
+
+    [RelayCommand]
+    private void ToggleOrderingDirection()
+    {
+        SelectedOrderingDirection = OrderDirectionAscending
+            ? OrderingDirectionDescendingOption
+            : OrderingDirectionAscendingOption;
     }
 
     [RelayCommand]
