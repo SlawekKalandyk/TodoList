@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Avalonia.Threading;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -20,9 +21,11 @@ public partial class MainWindowViewModel : ViewModelBase
     private const string OrderByDueDateOption = "Due date";
     private const string OrderingDirectionDescendingOption = "Descending";
     private const string OrderingDirectionAscendingOption = "Ascending";
+    private static readonly TimeSpan SearchDebounceDelay = TimeSpan.FromMilliseconds(200);
 
     private readonly ITodoRepository _todoRepository;
     private readonly List<TodoItemViewModel> _allTodos = new();
+    private readonly DispatcherTimer _searchDebounceTimer;
 
     public ObservableCollection<TodoItemViewModel> VisibleTodos { get; } = new();
 
@@ -86,6 +89,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private TodoPriorityFilter selectedPriorityFilter = TodoPriorityFilter.All;
 
     [ObservableProperty]
+    private string searchQuery = string.Empty;
+
+    [ObservableProperty]
     private int activeCount;
 
     [ObservableProperty]
@@ -131,6 +137,17 @@ public partial class MainWindowViewModel : ViewModelBase
     public MainWindowViewModel(ITodoRepository todoRepository)
     {
         _todoRepository = todoRepository;
+
+        _searchDebounceTimer = new DispatcherTimer
+        {
+            Interval = SearchDebounceDelay,
+        };
+        _searchDebounceTimer.Tick += (_, _) =>
+        {
+            _searchDebounceTimer.Stop();
+            ApplyFilter();
+        };
+
         LoadTodos();
     }
 
@@ -142,6 +159,12 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnSelectedPriorityFilterChanged(TodoPriorityFilter value)
     {
         ApplyFilter();
+    }
+
+    partial void OnSearchQueryChanged(string value)
+    {
+        _searchDebounceTimer.Stop();
+        _searchDebounceTimer.Start();
     }
 
     partial void OnActiveCountChanged(int value)
@@ -191,6 +214,17 @@ public partial class MainWindowViewModel : ViewModelBase
         _todoRepository.Add(title, NewTodoPriority);
         NewTodoText = string.Empty;
         LoadTodos();
+    }
+
+    [RelayCommand]
+    private void ClearSearch()
+    {
+        if (!string.IsNullOrEmpty(SearchQuery))
+        {
+            SearchQuery = string.Empty;
+            _searchDebounceTimer.Stop();
+            ApplyFilter();
+        }
     }
 
     [RelayCommand]
@@ -444,6 +478,13 @@ public partial class MainWindowViewModel : ViewModelBase
             TodoPriorityFilter.Critical => filteredTodos.Where(todo => todo.Priority == TodoPriority.Critical),
             _ => filteredTodos,
         };
+
+        var normalizedSearchQuery = SearchQuery.Trim();
+        if (!string.IsNullOrWhiteSpace(normalizedSearchQuery))
+        {
+            filteredTodos = filteredTodos.Where(todo =>
+                todo.Title.Contains(normalizedSearchQuery, StringComparison.OrdinalIgnoreCase));
+        }
 
         var filteredList = ApplySelectedOrdering(filteredTodos).ToList();
 

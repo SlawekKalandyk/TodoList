@@ -46,6 +46,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        AddHandler(KeyDownEvent, MainWindow_OnKeyDown, RoutingStrategies.Tunnel, handledEventsToo: true);
         AddHandler(PointerPressedEvent, MainWindow_OnPointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
         AddHandler(TappedEvent, MainWindow_OnTapped, RoutingStrategies.Bubble, handledEventsToo: true);
 
@@ -107,6 +108,37 @@ public partial class MainWindow : Window
         }
 
         Activate();
+    }
+
+    private void MainWindow_OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.F && e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        {
+            FocusSearchTextBox();
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.Escape
+            && SearchTodoTextBox is not null
+            && SearchTodoTextBox.IsKeyboardFocusWithin
+            && DataContext is MainWindowViewModel viewModel
+            && !string.IsNullOrWhiteSpace(viewModel.SearchQuery))
+        {
+            viewModel.ClearSearchCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
+    private void FocusSearchTextBox()
+    {
+        if (SearchTodoTextBox is null)
+        {
+            return;
+        }
+
+        SearchTodoTextBox.Focus();
+        SearchTodoTextBox.SelectAll();
     }
 
     private void SnapToRightEdge()

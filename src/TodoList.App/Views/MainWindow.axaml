@@ -67,7 +67,7 @@
     </Window.Styles>
 
     <Border x:Name="PanelRoot" Padding="16" Classes="panelChrome" Focusable="True">
-        <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
+        <Grid RowDefinitions="Auto,Auto,*,Auto,Auto" RowSpacing="12">
             <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                 <TextBlock Grid.Column="0"
                            Text="Todos"
@@ -463,7 +463,26 @@
                 </Border>
             </Grid>
 
-            <TextBlock Grid.Row="3"
+                        <Grid Grid.Row="3"
+                                    ColumnDefinitions="Auto,*,Auto"
+                                    ColumnSpacing="8">
+                                <TextBlock Grid.Column="0"
+                                                     Text="Search"
+                                                     FontSize="11"
+                                                     Opacity="0.85"
+                                                     VerticalAlignment="Center" />
+                                <TextBox x:Name="SearchTodoTextBox"
+                                                 Grid.Column="1"
+                                                 Text="{Binding SearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                 Watermark="Search visible todos by title"
+                                                 VerticalContentAlignment="Center" />
+                                <Button Grid.Column="2"
+                                                Content="Clear"
+                                                Padding="12,6"
+                                                Command="{Binding ClearSearchCommand}" />
+                        </Grid>
+
+                        <TextBlock Grid.Row="4"
                        Classes="summaryText"
                        FontSize="12"
                        Text="{Binding SummaryText}" />
