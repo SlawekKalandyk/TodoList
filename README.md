@@ -1,60 +1,98 @@
 # TodoList
 
-Avalonia desktop todo app designed as a right-side panel opened from the system tray, with SQLite local storage.
+TodoList is an Avalonia desktop todo app that runs as a tray-first right-side panel with local SQLite storage.
 
-## Implemented MVP
+## Highlights
 
-- Avalonia MVVM desktop app (.NET 8).
-- Tray icon with menu:
-	- Toggle Todos
-	- Exit
-- Side panel window behavior:
-	- Borderless
-	- Always on top
-	- Anchored to the right side of the current screen work area
-	- Hides when it loses focus
-- Theming:
-	- Dark theme only
-- Todo features:
-	- Quick add textbox at the top
-	- Priority on each todo: Minor, Normal (default), Major, Critical
-	- Enter-to-add and Add button
-	- Todo list body with complete and delete actions
-	- Double-click todo title to rename inline (Enter to save, Escape to cancel)
-	- Reject action for items that no longer matter (excluded from todo/completed)
-	- Restore action for rejected todos to move them back to Active
-	- Filters: separate status and priority dropdowns
-	- Optional grouping by added day or priority
-	- Summary counts for active, completed, and rejected
-- SQLite persistence via `Microsoft.Data.Sqlite`.
+- .NET 8 Avalonia MVVM desktop app.
+- Tray-first startup (panel starts hidden).
+- Tray icon actions:
+  - Toggle Todos
+  - Exit
+- Borderless, topmost side panel snapped to the right edge of the current screen.
+- Auto-hide on focus loss when not pinned.
+- Dark theme default.
 
-## Project Structure
+## Features
 
-- `src/TodoList.App` - Avalonia application
-- `src/TodoList.App/Data` - SQLite repository
-- `src/TodoList.App/Models` - Todo models and filter enum
-- `src/TodoList.App/ViewModels` - MVVM logic
-- `src/TodoList.App/Views` - Panel window UI
+- Add todos with a priority: Minor, Normal (default), Major, Critical.
+- Mark complete, delete, reject, and restore rejected items.
+- Inline rename by double-click:
+  - Enter or focus loss commits
+  - Escape cancels
+- Expand per-todo details panel to edit:
+  - Priority
+  - Due date (with clear action)
+  - Notes
+- Filters combine with AND semantics:
+  - Status filter: Active, Completed, Rejected, All
+  - Priority filter: All, Minor, Normal, Major, Critical
+- Grouping options:
+  - None
+  - Added day
+  - Due date
+  - Priority
+- Ordering options:
+  - None
+  - Due date
+  - Direction: Descending or Ascending
+- Summary counts for active, completed, and rejected.
 
-## Run
+## Panel Behavior
+
+- Width control is stored as a percent where 100% = 600px.
+- Allowed width percent range is 80-200 (480px-1200px).
+- Pin toggle keeps the panel open when focus changes.
+
+## Tech Stack
+
+- Avalonia 11
+- CommunityToolkit.Mvvm
+- Dapper
+- Microsoft.Data.Sqlite
+
+## Getting Started
 
 From repository root:
 
 ```powershell
 dotnet restore TodoList.slnx
+dotnet build TodoList.slnx
 dotnet run --project src/TodoList.App/TodoList.App.csproj
 ```
 
-## Storage Location
+If the app is already running and build output gets locked, use a custom output directory:
 
-The SQLite file is created at:
+```powershell
+dotnet build src/TodoList.App/TodoList.App.csproj -p:OutDir=e:/Programming/personal/TodoList/artifacts/build-test/
+```
 
-`%LOCALAPPDATA%/TodoListPanel/todos.sqlite`
+## Storage
 
-The UI settings file is created next to it:
+- Todo database: `%LOCALAPPDATA%/TodoListPanel/todos.sqlite`
+- UI settings: `%LOCALAPPDATA%/TodoListPanel/settings.json`
 
-`%LOCALAPPDATA%/TodoListPanel/settings.json`
+SQLite schema migrations are additive (missing columns are added when needed).
 
-## Notes for Linux Port
+## Persisted UI Settings
 
-The core architecture is already portable because it uses Avalonia and SQLite. For Linux, the app should work with minor behavior differences in tray and topmost window handling depending on desktop environment and Wayland/X11 rules.
+- Panel width percent
+- Pin state
+- Selected status filter
+- Selected priority filter
+- Selected grouping option
+- Selected ordering option
+- Selected ordering direction
+
+## Project Structure
+
+- `src/TodoList.App` - Avalonia application entry point and composition
+- `src/TodoList.App/Data` - repository abstractions and SQLite implementation
+- `src/TodoList.App/Models` - domain models, enums, and settings model
+- `src/TodoList.App/ViewModels` - UI behavior, commands, filtering, grouping, ordering
+- `src/TodoList.App/Views` - window XAML and interaction event handlers
+
+## Current Notes
+
+- There is currently no automated test project in this repository.
+- Todo persistence is synchronous in the current implementation.

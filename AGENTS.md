@@ -10,6 +10,7 @@ For product-level context, read [README.md](README.md).
 - Stack: Avalonia Desktop + CommunityToolkit.Mvvm + SQLite
 - Runtime target: .NET 8 (`net8.0`)
 - Test status: no automated test project in this repository today
+- Startup behavior: app starts hidden in tray mode; open/close panel via tray icon or tray menu
 
 ## Commands Agents Should Use
 From repo root:
@@ -20,6 +21,8 @@ dotnet build TodoList.slnx
 dotnet run --project src/TodoList.App/TodoList.App.csproj
 ```
 
+`dotnet restore` is usually needed after cloning or when package references change.
+
 If the app is currently running, build output can be locked. Use:
 
 ```powershell
@@ -27,7 +30,7 @@ dotnet build src/TodoList.App/TodoList.App.csproj -p:OutDir=e:/Programming/perso
 ```
 
 ## Architecture Map
-- App lifecycle + tray + settings wiring: [src/TodoList.App/App.axaml.cs](src/TodoList.App/App.axaml.cs)
+- App lifecycle + tray + settings load/sanitize + legacy filter normalization + settings persistence wiring: [src/TodoList.App/App.axaml.cs](src/TodoList.App/App.axaml.cs)
 - Main UI markup: [src/TodoList.App/Views/MainWindow.axaml](src/TodoList.App/Views/MainWindow.axaml)
 - Window behavior (snap, scaling, rename event handlers): [src/TodoList.App/Views/MainWindow.axaml.cs](src/TodoList.App/Views/MainWindow.axaml.cs)
 - Main feature logic and commands: [src/TodoList.App/ViewModels/MainWindowViewModel.cs](src/TodoList.App/ViewModels/MainWindowViewModel.cs)
@@ -43,16 +46,21 @@ dotnet build src/TodoList.App/TodoList.App.csproj -p:OutDir=e:/Programming/perso
   - Keep these values aligned across [src/TodoList.App/Views/MainWindow.axaml](src/TodoList.App/Views/MainWindow.axaml), [src/TodoList.App/Views/MainWindow.axaml.cs](src/TodoList.App/Views/MainWindow.axaml.cs), and [src/TodoList.App/App.axaml.cs](src/TodoList.App/App.axaml.cs).
   - Keep window min/max aligned with this range (480/1200) or right-edge snapping can drift on multi-monitor setups.
 - Filtering is two-dimensional (status + priority) and uses AND semantics.
+- Ordering and grouping settings are validated against ViewModel options in [src/TodoList.App/App.axaml.cs](src/TodoList.App/App.axaml.cs) (`SanitizeSettings`).
 - [src/TodoList.App/Models/TodoFilter.cs](src/TodoList.App/Models/TodoFilter.cs) still contains legacy priority values for settings migration.
   - Preserve/update normalization in [src/TodoList.App/App.axaml.cs](src/TodoList.App/App.axaml.cs) (`NormalizeLegacyCombinedFilter`) when changing filter enums.
 - Inline rename is double-click-driven; avoid reloading the entire list during rename commit.
   - Use in-place updates + filter reapply pattern from [src/TodoList.App/ViewModels/MainWindowViewModel.cs](src/TodoList.App/ViewModels/MainWindowViewModel.cs).
+- Flat and grouped lists both use `ScrollViewer` + `ItemsControl` row containers in [src/TodoList.App/Views/MainWindow.axaml](src/TodoList.App/Views/MainWindow.axaml); avoid ListBox-specific assumptions in event handling.
+- Details collapse has suppression logic in [src/TodoList.App/Views/MainWindow.axaml.cs](src/TodoList.App/Views/MainWindow.axaml.cs) (`SuppressDetailsCollapse`, `IsTapWithinVisibleTodoDetailsPanel`); preserve it when changing tap/dropdown handling.
+- Due date storage uses nullable UTC unix seconds in SQLite and is converted to local time in [src/TodoList.App/ViewModels/TodoItemViewModel.cs](src/TodoList.App/ViewModels/TodoItemViewModel.cs).
 
 ## Storage + Migration Facts
 - Todo DB path: `%LOCALAPPDATA%/TodoListPanel/todos.sqlite`
 - UI settings path: `%LOCALAPPDATA%/TodoListPanel/settings.json`
 - SQLite schema migration is additive in [src/TodoList.App/Data/SqliteTodoRepository.cs](src/TodoList.App/Data/SqliteTodoRepository.cs) via `EnsureColumnExists`.
 - Legacy combined filter values from older settings are normalized in [src/TodoList.App/App.axaml.cs](src/TodoList.App/App.axaml.cs).
+- Settings persistence includes selected status filter, priority filter, grouping option, ordering option, and ordering direction.
 
 ## Change Checklist For Agents
 When changing todo behavior, validate all touched layers:
