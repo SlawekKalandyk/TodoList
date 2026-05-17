@@ -4,6 +4,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using System;
 using System.ComponentModel;
 using System.IO;
@@ -17,6 +18,8 @@ namespace TodoList.App;
 
 public partial class App : Application
 {
+    private static readonly TimeSpan SettingsSaveDebounceDelay = TimeSpan.FromMilliseconds(350);
+
     private static readonly string[] AvailableGroupingOptions =
     [
         "None",
@@ -46,6 +49,8 @@ public partial class App : Application
     private AppUiSettings _initialSettings = new();
     private EventHandler<AvaloniaPropertyChangedEventArgs>? _mainWindowPropertyChangedHandler;
     private PropertyChangedEventHandler? _viewModelPropertyChangedHandler;
+    private DispatcherTimer? _settingsSaveDebounceTimer;
+    private bool _hasPendingSettingsSave;
     private bool _isExitRequested;
 
     public override void Initialize()
@@ -74,7 +79,13 @@ public partial class App : Application
             // Persist sanitized defaults even before the first panel open.
             _settingsStore.Save(_initialSettings);
 
-            desktop.Exit += (_, _) => SaveCurrentSettingsSnapshot();
+            _settingsSaveDebounceTimer = new DispatcherTimer
+            {
+                Interval = SettingsSaveDebounceDelay,
+            };
+            _settingsSaveDebounceTimer.Tick += SettingsSaveDebounceTimer_OnTick;
+
+            desktop.Exit += (_, _) => FlushPendingSettingsSnapshot(forceSaveCurrentSnapshot: true);
         }
 
         base.OnFrameworkInitializationCompleted();
@@ -219,7 +230,7 @@ public partial class App : Application
         {
             if (e.Property == MainWindow.WidthPercentProperty)
             {
-                SaveCurrentSettingsSnapshot();
+                RequestSettingsSnapshotSave();
             }
         };
         mainWindow.PropertyChanged += _mainWindowPropertyChangedHandler;
@@ -234,12 +245,50 @@ public partial class App : Application
                 or nameof(MainWindowViewModel.SelectedOrderingOption)
                 or nameof(MainWindowViewModel.SelectedOrderingDirection))
             {
-                SaveCurrentSettingsSnapshot();
+                RequestSettingsSnapshotSave();
             }
         };
         viewModel.PropertyChanged += _viewModelPropertyChangedHandler;
 
         // Ensure defaults or sanitized values are written even before first user interaction.
+        SaveCurrentSettingsSnapshot();
+    }
+
+    private void RequestSettingsSnapshotSave()
+    {
+        if (_settingsStore is null)
+        {
+            return;
+        }
+
+        _hasPendingSettingsSave = true;
+
+        if (_settingsSaveDebounceTimer is null)
+        {
+            SaveCurrentSettingsSnapshot();
+            _hasPendingSettingsSave = false;
+            return;
+        }
+
+        _settingsSaveDebounceTimer.Stop();
+        _settingsSaveDebounceTimer.Start();
+    }
+
+    private void SettingsSaveDebounceTimer_OnTick(object? sender, EventArgs e)
+    {
+        FlushPendingSettingsSnapshot();
+    }
+
+    private void FlushPendingSettingsSnapshot(bool forceSaveCurrentSnapshot = false)
+    {
+        _settingsSaveDebounceTimer?.Stop();
+
+        if (!_hasPendingSettingsSave && !forceSaveCurrentSnapshot)
+        {
+            return;
+        }
+
+        _hasPendingSettingsSave = false;
         SaveCurrentSettingsSnapshot();
     }
 
@@ -328,11 +377,11 @@ public partial class App : Application
     {
         if (_isExitRequested)
         {
-            SaveCurrentSettingsSnapshot();
+            FlushPendingSettingsSnapshot(forceSaveCurrentSnapshot: true);
             return;
         }
 
-        SaveCurrentSettingsSnapshot();
+        FlushPendingSettingsSnapshot(forceSaveCurrentSnapshot: true);
         DetachMainWindowPersistenceHandlers();
 
         if (_mainWindow is not null)
