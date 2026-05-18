@@ -101,6 +101,16 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool isAddComposerOpen;
 
     [ObservableProperty]
+    private bool isDeleteConfirmationOpen;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ConfirmDeleteTodoCommand))]
+    private long? deleteConfirmationTodoId;
+
+    [ObservableProperty]
+    private string deleteConfirmationTodoTitle = string.Empty;
+
+    [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveAddComposerTodoCommand))]
     [NotifyCanExecuteChangedFor(nameof(SaveAndAddAnotherComposerTodoCommand))]
     private string addComposerTitle = string.Empty;
@@ -197,6 +207,8 @@ public partial class MainWindowViewModel : ViewModelBase
     public bool OrderDirectionDescending => !OrderDirectionAscending;
 
     public bool CanSaveAddComposerTodo => !string.IsNullOrWhiteSpace(AddComposerTitle);
+
+    public bool CanConfirmDeleteTodo => DeleteConfirmationTodoId.HasValue;
 
     public string SummaryText =>
         $"{ActiveCount} active - {CompletedCount} completed - {RejectedCount} rejected";
@@ -364,6 +376,11 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanSaveAddComposerTodo));
     }
 
+    partial void OnDeleteConfirmationTodoIdChanged(long? value)
+    {
+        OnPropertyChanged(nameof(CanConfirmDeleteTodo));
+    }
+
     [RelayCommand]
     private void GoToPreviousPage()
     {
@@ -513,17 +530,43 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void DeleteTodo(TodoItemViewModel? todo)
+    private void RequestDeleteTodo(TodoItemViewModel? todo)
     {
         if (todo is null)
         {
             return;
         }
 
-        _todoRepository.Delete(todo.Id);
-        _todoById.Remove(todo.Id);
+        DeleteConfirmationTodoId = todo.Id;
+        DeleteConfirmationTodoTitle = todo.Title;
+        IsDeleteConfirmationOpen = true;
+    }
+
+    [RelayCommand]
+    private void CancelDeleteTodo()
+    {
+        if (!IsDeleteConfirmationOpen && !DeleteConfirmationTodoId.HasValue)
+        {
+            return;
+        }
+
+        ResetDeleteConfirmationState();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanConfirmDeleteTodo))]
+    private void ConfirmDeleteTodo()
+    {
+        if (!DeleteConfirmationTodoId.HasValue)
+        {
+            return;
+        }
+
+        var todoId = DeleteConfirmationTodoId.Value;
+        _todoRepository.Delete(todoId);
+        _todoById.Remove(todoId);
         RefreshSummaryCountsFromRepository();
         ApplyFilter();
+        ResetDeleteConfirmationState();
     }
 
     [RelayCommand]
@@ -759,6 +802,13 @@ public partial class MainWindowViewModel : ViewModelBase
         AddComposerNotes = string.Empty;
         AddComposerDueAtLocal = null;
         AddComposerPriority = preservePriority ? previousPriority : TodoPriority.Normal;
+    }
+
+    private void ResetDeleteConfirmationState()
+    {
+        IsDeleteConfirmationOpen = false;
+        DeleteConfirmationTodoId = null;
+        DeleteConfirmationTodoTitle = string.Empty;
     }
 
     private void LoadTodos()

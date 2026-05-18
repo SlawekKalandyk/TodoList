@@ -67,13 +67,15 @@
                     <StackPanel Grid.Column="2"
                                 Orientation="Horizontal"
                                 Spacing="6"
+                                MinWidth="62"
+                                HorizontalAlignment="Right"
                                 VerticalAlignment="Top">
                         <Button Width="28"
                                 Height="28"
                                 MinWidth="28"
                                 MinHeight="28"
                                 Padding="0"
-                                Classes="renameTodoButton"
+                                Classes="renameTodoButton todoActionButton"
                                 ToolTip.Tip="Rename"
                                 Click="TodoRenameButton_OnClick">
                             <Path Width="12"
@@ -84,16 +86,43 @@
                                   Fill="#C4CAD3"
                                   Data="M3,17.25V21H6.75L17.81,9.94L14.06,6.19L3,17.25M20.71,7.04C21.1,6.65 21.1,6.02 20.71,5.63L18.37,3.29C17.98,2.9 17.35,2.9 16.96,3.29L15.13,5.12L18.88,8.87L20.71,7.04Z" />
                         </Button>
-                        <Button VerticalAlignment="Top"
-                                IsVisible="{Binding CanReject}"
-                                Content="Reject"
-                                Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).RejectTodoCommand}"
-                                CommandParameter="{Binding}" />
-                        <Button VerticalAlignment="Top"
-                                IsVisible="{Binding IsRejected}"
-                                Content="Restore"
-                                Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).RestoreTodoCommand}"
-                                CommandParameter="{Binding}" />
+                        <Button Width="28"
+                                Height="28"
+                                MinWidth="28"
+                                MinHeight="28"
+                                Padding="0"
+                                Classes="todoActionButton todoOverflowButton"
+                                ToolTip.Tip="More actions"
+                                Click="TodoOverflowButton_OnClick">
+                            <Path Width="12"
+                                  Height="12"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"
+                                  Stretch="Uniform"
+                                  Fill="#C4CAD3"
+                                  Data="M12,2A2,2 0 0,1 14,4A2,2 0 0,1 12,6A2,2 0 0,1 10,4A2,2 0 0,1 12,2M12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12A2,2 0 0,1 12,10M12,18A2,2 0 0,1 14,20A2,2 0 0,1 12,22A2,2 0 0,1 10,20A2,2 0 0,1 12,18Z" />
+                            <Button.ContextMenu>
+                                <ContextMenu x:DataType="vm:TodoItemViewModel"
+                                             DataContext="{Binding}"
+                                             Opened="TodoOverflowMenu_OnOpened"
+                                             Closed="TodoOverflowMenu_OnClosed"
+                                             VerticalOffset="1"
+                                             Placement="BottomEdgeAlignedRight">
+                                    <MenuItem Header="Reject"
+                                              IsVisible="{Binding CanReject}"
+                                              Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).RejectTodoCommand}"
+                                              CommandParameter="{Binding}" />
+                                    <MenuItem Header="Restore"
+                                              IsVisible="{Binding IsRejected}"
+                                              Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).RestoreTodoCommand}"
+                                              CommandParameter="{Binding}" />
+                                    <Separator />
+                                    <MenuItem Header="Delete"
+                                              Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).RequestDeleteTodoCommand}"
+                                              CommandParameter="{Binding}" />
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                        </Button>
                     </StackPanel>
                     <Border Classes="todoDetailsPanel"
                             Grid.Row="1"
@@ -287,8 +316,160 @@
             <Setter Property="Foreground" Value="#C4CAD3" />
         </Style>
 
+        <Style Selector="Button.todoOverflowButton">
+            <Setter Property="Background" Value="#2E3136" />
+            <Setter Property="BorderBrush" Value="#484D55" />
+        </Style>
+
+        <Style Selector="Button.todoOverflowButton /template/ ContentPresenter">
+            <Setter Property="Background" Value="#2E3136" />
+            <Setter Property="BorderBrush" Value="#484D55" />
+        </Style>
+
+        <Style Selector="Button.todoOverflowButton:pointerover">
+            <Setter Property="Background" Value="#373B42" />
+            <Setter Property="BorderBrush" Value="#555B66" />
+        </Style>
+
+        <Style Selector="Button.todoOverflowButton:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#373B42" />
+            <Setter Property="BorderBrush" Value="#555B66" />
+        </Style>
+
+        <Style Selector="Button.todoOverflowButton:pressed">
+            <Setter Property="Background" Value="#4A5260" />
+            <Setter Property="BorderBrush" Value="#6E7788" />
+        </Style>
+
+        <Style Selector="Button.todoOverflowButton:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="#4A5260" />
+            <Setter Property="BorderBrush" Value="#6E7788" />
+        </Style>
+
+        <Style Selector="Button.todoOverflowButton.menuOpen">
+            <Setter Property="Background" Value="#4A5260" />
+            <Setter Property="BorderBrush" Value="#6E7788" />
+        </Style>
+
+        <Style Selector="Button.todoOverflowButton.menuOpen /template/ ContentPresenter">
+            <Setter Property="Background" Value="#4A5260" />
+            <Setter Property="BorderBrush" Value="#6E7788" />
+        </Style>
+
+        <Style Selector="ToggleButton.pinToggleButton">
+            <Setter Property="Background" Value="#2E3136" />
+            <Setter Property="BorderBrush" Value="#484D55" />
+        </Style>
+
+        <Style Selector="ToggleButton.pinToggleButton /template/ ContentPresenter">
+            <Setter Property="Background" Value="#2E3136" />
+            <Setter Property="BorderBrush" Value="#484D55" />
+        </Style>
+
+        <Style Selector="ToggleButton.pinToggleButton:pointerover">
+            <Setter Property="Background" Value="#373B42" />
+            <Setter Property="BorderBrush" Value="#555B66" />
+        </Style>
+
+        <Style Selector="ToggleButton.pinToggleButton:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#373B42" />
+            <Setter Property="BorderBrush" Value="#555B66" />
+        </Style>
+
+        <Style Selector="ToggleButton.pinToggleButton:pressed">
+            <Setter Property="Background" Value="#4A5260" />
+            <Setter Property="BorderBrush" Value="#6E7788" />
+        </Style>
+
+        <Style Selector="ToggleButton.pinToggleButton:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="#4A5260" />
+            <Setter Property="BorderBrush" Value="#6E7788" />
+        </Style>
+
+        <Style Selector="ToggleButton.pinToggleButton:checked">
+            <Setter Property="Background" Value="#4A5260" />
+            <Setter Property="BorderBrush" Value="#6E7788" />
+        </Style>
+
+        <Style Selector="ToggleButton.pinToggleButton:checked /template/ ContentPresenter">
+            <Setter Property="Background" Value="#4A5260" />
+            <Setter Property="BorderBrush" Value="#6E7788" />
+        </Style>
+
+        <Style Selector="ToggleButton.pinToggleButton:checked:pointerover">
+            <Setter Property="Background" Value="#4A5260" />
+            <Setter Property="BorderBrush" Value="#6E7788" />
+        </Style>
+
+        <Style Selector="ToggleButton.pinToggleButton:checked:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#4A5260" />
+            <Setter Property="BorderBrush" Value="#6E7788" />
+        </Style>
+
+        <Style Selector="ToggleButton.pinToggleButton Path.pinIcon">
+            <Setter Property="Fill" Value="#C4CAD3" />
+        </Style>
+
+        <Style Selector="ToggleButton.pinToggleButton:checked Path.pinIcon">
+            <Setter Property="Fill" Value="#F3F3F3" />
+        </Style>
+
+        <Style Selector="Button.deleteTodoButton">
+            <Setter Property="Background" Value="#B73A3A" />
+            <Setter Property="BorderBrush" Value="#8F2D2D" />
+        </Style>
+
+        <Style Selector="Button.deleteTodoButton /template/ ContentPresenter">
+            <Setter Property="Background" Value="#B73A3A" />
+            <Setter Property="BorderBrush" Value="#8F2D2D" />
+        </Style>
+
+        <Style Selector="Button.deleteTodoButton:pointerover">
+            <Setter Property="Background" Value="#9C3030" />
+            <Setter Property="BorderBrush" Value="#7A2525" />
+        </Style>
+
+        <Style Selector="Button.deleteTodoButton:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#9C3030" />
+            <Setter Property="BorderBrush" Value="#7A2525" />
+        </Style>
+
+        <Style Selector="Button.deleteTodoButton:pressed">
+            <Setter Property="Background" Value="#7A2525" />
+            <Setter Property="BorderBrush" Value="#5C1B1B" />
+        </Style>
+
+        <Style Selector="Button.deleteTodoButton:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="#7A2525" />
+            <Setter Property="BorderBrush" Value="#5C1B1B" />
+        </Style>
+
         <Style Selector="Button.groupDirectionButton:disabled">
             <Setter Property="Opacity" Value="0.45" />
+        </Style>
+
+        <Style Selector="NumericUpDown#WidthPercentInput /template/ #PART_Spinner /template/ RepeatButton#PART_IncreaseButton:disabled">
+            <Setter Property="Background" Value="#1F2328" />
+            <Setter Property="BorderBrush" Value="#30353D" />
+            <Setter Property="Foreground" Value="#6D7480" />
+        </Style>
+
+        <Style Selector="NumericUpDown#WidthPercentInput /template/ #PART_Spinner /template/ RepeatButton#PART_DecreaseButton:disabled">
+            <Setter Property="Background" Value="#1F2328" />
+            <Setter Property="BorderBrush" Value="#30353D" />
+            <Setter Property="Foreground" Value="#6D7480" />
+        </Style>
+
+        <Style Selector="NumericUpDown#WidthPercentInput /template/ #PART_Spinner /template/ RepeatButton#PART_IncreaseButton:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#1F2328" />
+            <Setter Property="BorderBrush" Value="#30353D" />
+            <Setter Property="Opacity" Value="0.85" />
+        </Style>
+
+        <Style Selector="NumericUpDown#WidthPercentInput /template/ #PART_Spinner /template/ RepeatButton#PART_DecreaseButton:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#1F2328" />
+            <Setter Property="BorderBrush" Value="#30353D" />
+            <Setter Property="Opacity" Value="0.85" />
         </Style>
 
         <Style Selector="DatePicker.todoDueDatePicker:pointerover">
@@ -356,16 +537,31 @@
                     <TextBlock VerticalAlignment="Center" Text="%" />
                 </StackPanel>
                 <ToggleButton Grid.Column="2"
+                              Classes="pinToggleButton"
                               IsChecked="{Binding IsPinned}"
-                              Content="Pin"
-                              MinWidth="74"
+                              Width="32"
+                              Height="32"
+                              MinWidth="32"
+                              MinHeight="32"
+                              Padding="0"
+                              Margin="12,0,0,0"
+                              HorizontalContentAlignment="Center"
+                              VerticalContentAlignment="Center"
                               HorizontalAlignment="Right"
                               ToolTip.Tip="When pinned, the panel stays open.">
-                    <ToggleButton.Styles>
-                        <Style Selector="ToggleButton:checked">
-                            <Setter Property="Content" Value="Pinned" />
-                        </Style>
-                    </ToggleButton.Styles>
+                    <Path Classes="pinIcon"
+                          Width="16"
+                          Height="16"
+                          Margin="0,3,0,0"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          RenderTransformOrigin="0.5,0.5"
+                          Stretch="Uniform"
+                          Data="M16,4V2H8V4H10V10L7,13V15H11V22H13V15H17V13L14,10V4H16Z">
+                        <Path.RenderTransform>
+                            <RotateTransform Angle="-30" />
+                        </Path.RenderTransform>
+                    </Path>
                 </ToggleButton>
             </Grid>
 
@@ -734,6 +930,44 @@
                         <Button Content="Save and add another"
                                 Padding="12,6"
                                 Command="{Binding SaveAndAddAnotherComposerTodoCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <Border IsVisible="{Binding IsDeleteConfirmationOpen}"
+                Background="#9914181E"
+                Focusable="True">
+            <Border HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Width="340"
+                    Margin="16"
+                    CornerRadius="10"
+                    BorderThickness="1"
+                    BorderBrush="#4C5460"
+                    Background="#23262C"
+                    Padding="14">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="Delete todo?"
+                               FontSize="18"
+                               FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding DeleteConfirmationTodoTitle}"
+                               TextWrapping="Wrap"
+                               MaxHeight="72"
+                               Opacity="0.9" />
+                    <TextBlock Text="This action cannot be undone."
+                               FontSize="11"
+                               Opacity="0.75" />
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                Spacing="8">
+                        <Button Content="Cancel"
+                                Padding="12,6"
+                                Command="{Binding CancelDeleteTodoCommand}" />
+                        <Button Content="Delete"
+                                Padding="12,6"
+                                Classes="deleteTodoButton"
+                                Command="{Binding ConfirmDeleteTodoCommand}" />
                     </StackPanel>
                 </StackPanel>
             </Border>

@@ -19,8 +19,11 @@ public partial class MainWindow : Window
     private const double BasePanelWidth = 600;
     private const decimal WidthPercentMinimum = 80m;
     private const decimal WidthPercentMaximum = 200m;
+    private static readonly TimeSpan OverflowMenuReopenSuppressionWindow = TimeSpan.FromMilliseconds(250);
 
     private bool _isTodoPriorityDropDownOpen;
+    private Button? _lastClosedOverflowButton;
+    private DateTimeOffset _lastClosedOverflowAtUtc = DateTimeOffset.MinValue;
 
     public static readonly StyledProperty<decimal> WidthPercentProperty =
         AvaloniaProperty.Register<MainWindow, decimal>(nameof(WidthPercent), 100m);
@@ -130,6 +133,15 @@ public partial class MainWindow : Window
             && cancelComposerViewModel.IsAddComposerOpen)
         {
             cancelComposerViewModel.CancelAddComposerCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.Escape
+            && DataContext is MainWindowViewModel cancelDeleteViewModel
+            && cancelDeleteViewModel.IsDeleteConfirmationOpen)
+        {
+            cancelDeleteViewModel.CancelDeleteTodoCommand.Execute(null);
             e.Handled = true;
             return;
         }
@@ -299,6 +311,69 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    private void TodoOverflowButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button overflowButton
+            || overflowButton.ContextMenu is not ContextMenu contextMenu)
+        {
+            return;
+        }
+
+        contextMenu.Tag = overflowButton;
+
+        var closedRecently = ReferenceEquals(_lastClosedOverflowButton, overflowButton)
+            && DateTimeOffset.UtcNow - _lastClosedOverflowAtUtc <= OverflowMenuReopenSuppressionWindow;
+        if (closedRecently)
+        {
+            _lastClosedOverflowButton = null;
+            e.Handled = true;
+            return;
+        }
+
+        if (contextMenu.IsOpen)
+        {
+            contextMenu.Close();
+            e.Handled = true;
+            return;
+        }
+
+        contextMenu.Open(overflowButton);
+        e.Handled = true;
+    }
+
+    private void TodoOverflowMenu_OnOpened(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not ContextMenu contextMenu
+            || ResolveOverflowMenuButton(contextMenu) is not Button overflowButton)
+        {
+            return;
+        }
+
+        overflowButton.Classes.Add("menuOpen");
+        if (ReferenceEquals(_lastClosedOverflowButton, overflowButton))
+        {
+            _lastClosedOverflowButton = null;
+        }
+    }
+
+    private void TodoOverflowMenu_OnClosed(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not ContextMenu contextMenu
+            || ResolveOverflowMenuButton(contextMenu) is not Button overflowButton)
+        {
+            return;
+        }
+
+        overflowButton.Classes.Remove("menuOpen");
+        _lastClosedOverflowButton = overflowButton;
+        _lastClosedOverflowAtUtc = DateTimeOffset.UtcNow;
+    }
+
+    private static Button? ResolveOverflowMenuButton(ContextMenu contextMenu)
+    {
+        return contextMenu.Tag as Button ?? contextMenu.PlacementTarget as Button;
+    }
+
     private void TodoItemRow_OnTapped(object? sender, TappedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel viewModel
@@ -433,7 +508,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (viewModel.IsAddComposerOpen)
+        if (viewModel.IsAddComposerOpen || viewModel.IsDeleteConfirmationOpen)
         {
             return;
         }
