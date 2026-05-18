@@ -139,11 +139,12 @@
                                        Opacity="0.8" />
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
                                 <DatePicker Grid.Column="0"
+                                            Classes="todoDueDatePicker"
                                             MinWidth="0"
                                             HorizontalAlignment="Stretch"
                                             MonthFormat="MMM"
                                             SelectedDate="{Binding DueAtUtc, Mode=OneWay}"
-                                        SelectedDateChanged="TodoDueDatePicker_OnSelectedDateChanged" />
+                                            SelectedDateChanged="TodoDueDatePicker_OnSelectedDateChanged" />
                                 <Button Grid.Column="1"
                                         VerticalAlignment="Center"
                                         Width="32"
@@ -288,6 +289,36 @@
 
         <Style Selector="Button.groupDirectionButton:disabled">
             <Setter Property="Opacity" Value="0.45" />
+        </Style>
+
+        <Style Selector="DatePicker.todoDueDatePicker:pointerover">
+            <Setter Property="Background" Value="#0E0F12" />
+            <Setter Property="BorderBrush" Value="#C4CAD3" />
+        </Style>
+
+        <Style Selector="DatePicker.todoDueDatePicker:pressed">
+            <Setter Property="Background" Value="#0E0F12" />
+            <Setter Property="BorderBrush" Value="#C4CAD3" />
+        </Style>
+
+        <Style Selector="DatePicker.todoDueDatePicker:pointerover /template/ TextBox#PART_TextBox">
+            <Setter Property="Background" Value="#0E0F12" />
+            <Setter Property="BorderBrush" Value="#C4CAD3" />
+        </Style>
+
+        <Style Selector="DatePicker.todoDueDatePicker:pointerover /template/ Button#PART_Button">
+            <Setter Property="Background" Value="#0E0F12" />
+            <Setter Property="BorderBrush" Value="#C4CAD3" />
+        </Style>
+
+        <Style Selector="DatePicker.todoDueDatePicker:pressed /template/ TextBox#PART_TextBox">
+            <Setter Property="Background" Value="#0E0F12" />
+            <Setter Property="BorderBrush" Value="#C4CAD3" />
+        </Style>
+
+        <Style Selector="DatePicker.todoDueDatePicker:pressed /template/ Button#PART_Button">
+            <Setter Property="Background" Value="#0E0F12" />
+            <Setter Property="BorderBrush" Value="#C4CAD3" />
         </Style>
 
         <Style Selector="Border.groupedTodoRow">
