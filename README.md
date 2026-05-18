@@ -89,6 +89,7 @@ dotnet build src/TodoList.App/TodoList.App.csproj -p:OutDir=e:/Programming/perso
 
 - Todo database: `%LOCALAPPDATA%/TodoListPanel/todos.sqlite`
 - UI settings: `%LOCALAPPDATA%/TodoListPanel/settings.json`
+- Debug builds use `%LOCALAPPDATA%/TodoListPanel-debug/` for both files.
 
 SQLite schema migrations are additive (missing columns are added when needed).
 

@@ -76,6 +76,7 @@ Use `CONFIG`, `RID`, and `PUBLISH_ROOT` overrides when needed.
 ## Storage + Migration Facts
 - Todo DB path: `%LOCALAPPDATA%/TodoListPanel/todos.sqlite`
 - UI settings path: `%LOCALAPPDATA%/TodoListPanel/settings.json`
+- Debug builds use `%LOCALAPPDATA%/TodoListPanel-debug/` for both files.
 - Settings persistence is debounced (350 ms) and force-flushed on app exit/window close; keep new settings writes on the debounced path in [src/TodoList.App/App.axaml.cs](src/TodoList.App/App.axaml.cs).
 - SQLite schema migration is additive in [src/TodoList.App/Data/SqliteTodoRepository.cs](src/TodoList.App/Data/SqliteTodoRepository.cs) via `EnsureColumnExists`.
 - Legacy combined filter values from older settings are normalized in [src/TodoList.App/App.axaml.cs](src/TodoList.App/App.axaml.cs).

@@ -141,9 +141,14 @@ public partial class App : Application
 
     private static string BuildDataDirectory()
     {
+        var dataDirectoryName = "TodoListPanel";
+    #if DEBUG
+        dataDirectoryName += "-debug";
+    #endif
+
         var dataDirectory = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "TodoListPanel");
+            dataDirectoryName);
 
         Directory.CreateDirectory(dataDirectory);
 
