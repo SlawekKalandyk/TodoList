@@ -45,6 +45,12 @@ TodoList is an Avalonia desktop todo app that runs as a tray-first right-side pa
   - Due date
   - Priority
   - Direction: Descending or Ascending
+- Pagination:
+  - Page size options: 10, 25, 50, 100
+  - Previous/next page navigation with visible-range status text
+  - Flat mode pages directly from SQLite (`QueryCount` + `QueryPage`)
+  - Grouped mode preserves group ordering first, then slices pages
+  - Groups may span pages; each page segment still renders the group header so rows are not visually orphaned
 - Summary counts for active, completed, and rejected.
 
 ## Panel Behavior
@@ -96,6 +102,8 @@ SQLite schema migrations are additive (missing columns are added when needed).
 - Selected grouping option
 - Selected ordering option
 - Selected ordering direction
+
+Pagination state is not persisted yet (page size/current page reset per session).
 
 ## Project Structure
 

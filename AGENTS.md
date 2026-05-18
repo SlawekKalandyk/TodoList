@@ -2,7 +2,7 @@
 
 ## Purpose
 Use this file as the fast path for AI coding agents working in this repository.
-For product-level behavior and release context, read [README.md](README.md), [docs/feature-roadmap.md](docs/feature-roadmap.md), and [docs/v1.1-implementation-checklist.md](docs/v1.1-implementation-checklist.md).
+For product-level behavior and release context, read [README.md](README.md), [docs/feature-roadmap.md](docs/feature-roadmap.md), [docs/v1.1-implementation-checklist.md](docs/v1.1-implementation-checklist.md), and [docs/performance-improvements.md](docs/performance-improvements.md).
 
 ## Project Snapshot
 - Solution: [TodoList.slnx](TodoList.slnx)
@@ -60,8 +60,10 @@ Use `CONFIG`, `RID`, and `PUBLISH_ROOT` overrides when needed.
   - Keep window min/max aligned with this range (480/1200) or right-edge snapping can drift on multi-monitor setups.
 - Filtering uses AND semantics across smart view, status (when enabled), priority, and search.
 - Smart view behavior is intentional: when `SelectedSmartView != TodoSmartView.None`, status filter is disabled (`IsStatusFilterEnabled == false`).
-- Current smart views are `None`, `Today`, `DueSoon`, and `Overdue` in [src/TodoList.App/Models/TodoSmartView.cs](src/TodoList.App/Models/TodoSmartView.cs).
+- Current smart views (enum order) are `None`, `Today`, `Overdue`, and `DueSoon` in [src/TodoList.App/Models/TodoSmartView.cs](src/TodoList.App/Models/TodoSmartView.cs).
+- UI display order is intentionally `None`, `Due today`, `Due soon (7 days)`, then `Overdue`.
 - Grouping/ordering option strings in [src/TodoList.App/ViewModels/MainWindowViewModel.cs](src/TodoList.App/ViewModels/MainWindowViewModel.cs) must stay aligned with validation in [src/TodoList.App/App.axaml.cs](src/TodoList.App/App.axaml.cs) (`SanitizeSettings`).
+  - Update both the arrays in `App.axaml.cs` and the private option constants in `MainWindowViewModel.cs`; mismatches cause settings values to be sanitized back to defaults.
 - [src/TodoList.App/Models/TodoFilter.cs](src/TodoList.App/Models/TodoFilter.cs) still contains legacy priority values for settings migration.
   - Preserve/update normalization in [src/TodoList.App/App.axaml.cs](src/TodoList.App/App.axaml.cs) (`NormalizeLegacyCombinedFilter`) when changing filter enums.
 - Inline rename is pen-button-driven; avoid reloading the entire list during rename commit.
@@ -74,6 +76,7 @@ Use `CONFIG`, `RID`, and `PUBLISH_ROOT` overrides when needed.
 ## Storage + Migration Facts
 - Todo DB path: `%LOCALAPPDATA%/TodoListPanel/todos.sqlite`
 - UI settings path: `%LOCALAPPDATA%/TodoListPanel/settings.json`
+- Settings persistence is debounced (350 ms) and force-flushed on app exit/window close; keep new settings writes on the debounced path in [src/TodoList.App/App.axaml.cs](src/TodoList.App/App.axaml.cs).
 - SQLite schema migration is additive in [src/TodoList.App/Data/SqliteTodoRepository.cs](src/TodoList.App/Data/SqliteTodoRepository.cs) via `EnsureColumnExists`.
 - Legacy combined filter values from older settings are normalized in [src/TodoList.App/App.axaml.cs](src/TodoList.App/App.axaml.cs).
 - Settings persistence includes selected status filter, smart view, priority filter, grouping option, ordering option, and ordering direction.
