@@ -43,29 +43,22 @@
                               IsEnabled="{Binding CanToggleCompleted}"
                               Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).ToggleCompletedCommand}"
                               CommandParameter="{Binding}" />
-                    <StackPanel Grid.Column="1" Spacing="2">
+                    <StackPanel Grid.Column="1"
+                                Spacing="2"
+                                VerticalAlignment="Center">
                         <StackPanel IsVisible="{Binding IsNotRenaming}" Spacing="2">
                             <TextBlock Classes="todoTitle"
                                        Classes.rejectedState="{Binding IsRejected}"
                                        Text="{Binding Title}"
                                        VerticalAlignment="Center"
                                        TextWrapping="Wrap" />
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Border Classes="priorityChip"
-                                        Classes.priorityMinor="{Binding IsPriorityMinor}"
-                                        Classes.priorityNormal="{Binding IsPriorityNormal}"
-                                        Classes.priorityMajor="{Binding IsPriorityMajor}"
-                                        Classes.priorityCritical="{Binding IsPriorityCritical}"
-                                        Classes.rejectedState="{Binding IsRejected}"
-                                        HorizontalAlignment="Left"
-                                        Padding="6,1"
-                                        CornerRadius="10"
-                                        BorderThickness="1">
-                                    <TextBlock Text="{Binding PriorityLabel}"
-                                               FontSize="10"
-                                               FontWeight="SemiBold"
-                                               Opacity="0.9" />
-                                </Border>
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="6"
+                                        IsVisible="{Binding HasDueDate}">
+                                <TextBlock Text="{Binding DueDateLabel}"
+                                           Opacity="0.75"
+                                           FontSize="11"
+                                           VerticalAlignment="Center" />
                                 <Border Classes="urgencyChip"
                                         Classes.overdue="{Binding IsUrgencyOverdue}"
                                         Classes.today="{Binding IsUrgencyToday}"
@@ -82,23 +75,7 @@
                                                FontWeight="SemiBold"
                                                Opacity="0.95" />
                                 </Border>
-                                <Border Classes="rejectedChip"
-                                        IsVisible="{Binding IsRejected}"
-                                        HorizontalAlignment="Left"
-                                        Padding="6,1"
-                                        CornerRadius="10"
-                                        BorderThickness="1">
-                                    <TextBlock Text="Rejected"
-                                               FontSize="10"
-                                               FontWeight="SemiBold"
-                                               Foreground="#A8AFB9" />
-                                </Border>
                             </StackPanel>
-                            <TextBlock Text="{Binding DueDateLabel}"
-                                       IsVisible="{Binding HasDueDate}"
-                                       Opacity="0.75"
-                                       FontSize="11"
-                                       VerticalAlignment="Center" />
                         </StackPanel>
                         <TextBox IsVisible="{Binding IsRenaming}"
                                  Text="{Binding RenameText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -599,41 +576,6 @@
         <Style Selector="Border.todoRow.rejectedState">
             <Setter Property="BorderBrush" Value="#6B7078" />
             <Setter Property="Opacity" Value="0.88" />
-        </Style>
-
-        <Style Selector="Border.priorityChip">
-            <Setter Property="Background" Value="#24313F" />
-            <Setter Property="BorderBrush" Value="#435366" />
-        </Style>
-
-        <Style Selector="Border.priorityChip.priorityMinor">
-            <Setter Property="Background" Value="#252B33" />
-            <Setter Property="BorderBrush" Value="#495361" />
-        </Style>
-
-        <Style Selector="Border.priorityChip.priorityNormal">
-            <Setter Property="Background" Value="#223244" />
-            <Setter Property="BorderBrush" Value="#456280" />
-        </Style>
-
-        <Style Selector="Border.priorityChip.priorityMajor">
-            <Setter Property="Background" Value="#3B3227" />
-            <Setter Property="BorderBrush" Value="#7A6140" />
-        </Style>
-
-        <Style Selector="Border.priorityChip.priorityCritical">
-            <Setter Property="Background" Value="#3A2A2A" />
-            <Setter Property="BorderBrush" Value="#7A4646" />
-        </Style>
-
-        <Style Selector="Border.priorityChip.rejectedState">
-            <Setter Property="Background" Value="#252A31" />
-            <Setter Property="BorderBrush" Value="#5A616B" />
-        </Style>
-
-        <Style Selector="Border.rejectedChip">
-            <Setter Property="Background" Value="#1F232A" />
-            <Setter Property="BorderBrush" Value="#6B7078" />
         </Style>
 
         <Style Selector="Border.urgencyChip">
