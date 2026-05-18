@@ -563,6 +563,13 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
+        // Null due dates are handled by ClearTodoDueAtUtc to avoid accidental clears
+        // from DatePicker rebind events during regroup/reorder operations.
+        if (!todo.DueAtUtc.HasValue)
+        {
+            return;
+        }
+
         var normalizedDueAtUtc = todo.DueAtUtc?.ToUniversalTime();
 
         _todoRepository.UpdateDueAtUtc(todo.Id, normalizedDueAtUtc);

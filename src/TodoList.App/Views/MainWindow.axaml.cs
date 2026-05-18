@@ -318,7 +318,7 @@ public partial class MainWindow : Window
         viewModel.SaveTodoNotesCommand.Execute(todo);
     }
 
-    private void TodoDueDatePicker_OnSelectedDateChanged(object? sender, DatePickerSelectedValueChangedEventArgs _)
+    private void TodoDueDatePicker_OnSelectedDateChanged(object? sender, DatePickerSelectedValueChangedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel viewModel
             || sender is not DatePicker datePicker
@@ -326,6 +326,19 @@ public partial class MainWindow : Window
         {
             return;
         }
+
+        // Ignore rebinding noise when the picker is just reflecting the current model value.
+        if (e.NewDate == todo.DueAtUtc)
+        {
+            return;
+        }
+
+        if (!e.NewDate.HasValue || e.NewDate == e.OldDate)
+        {
+            return;
+        }
+
+        todo.DueAtUtc = e.NewDate;
 
         viewModel.SaveTodoDueAtUtcCommand.Execute(todo);
     }

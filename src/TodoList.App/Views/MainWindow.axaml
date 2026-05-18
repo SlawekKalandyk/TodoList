@@ -142,7 +142,7 @@
                                             MinWidth="0"
                                             HorizontalAlignment="Stretch"
                                             MonthFormat="MMM"
-                                            SelectedDate="{Binding DueAtUtc, Mode=TwoWay}"
+                                            SelectedDate="{Binding DueAtUtc, Mode=OneWay}"
                                         SelectedDateChanged="TodoDueDatePicker_OnSelectedDateChanged" />
                                 <Button Grid.Column="1"
                                         VerticalAlignment="Center"
