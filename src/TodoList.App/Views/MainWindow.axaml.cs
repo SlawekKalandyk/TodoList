@@ -46,6 +46,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        DeleteConfirmationOverlay.PropertyChanged += DeleteConfirmationOverlay_OnPropertyChanged;
         AddHandler(KeyDownEvent, MainWindow_OnKeyDown, RoutingStrategies.Tunnel, handledEventsToo: true);
         AddHandler(PointerPressedEvent, MainWindow_OnPointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
         AddHandler(TappedEvent, MainWindow_OnTapped, RoutingStrategies.Bubble, handledEventsToo: true);
@@ -185,6 +186,33 @@ public partial class MainWindow : Window
 
             AddComposerTitleTextBox.Focus();
             AddComposerTitleTextBox.SelectAll();
+        }, DispatcherPriority.Input);
+    }
+
+    private void SaveAndAddAnotherButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        FocusAddComposerTitleTextBox();
+    }
+
+    private void DeleteConfirmationOverlay_OnPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    {
+        if (e.Property == IsVisibleProperty
+            && DeleteConfirmationOverlay.IsVisible)
+        {
+            FocusDeleteConfirmationCancelButton();
+        }
+    }
+
+    private void FocusDeleteConfirmationCancelButton()
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (DeleteConfirmationCancelButton is null || !DeleteConfirmationCancelButton.IsVisible)
+            {
+                return;
+            }
+
+            DeleteConfirmationCancelButton.Focus();
         }, DispatcherPriority.Input);
     }
 

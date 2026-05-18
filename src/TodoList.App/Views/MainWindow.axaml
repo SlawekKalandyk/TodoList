@@ -50,39 +50,38 @@
                                        Text="{Binding Title}"
                                        VerticalAlignment="Center"
                                        TextWrapping="Wrap" />
-                            <Border Classes="priorityChip"
-                                    Classes.priorityMinor="{Binding IsPriorityMinor}"
-                                    Classes.priorityNormal="{Binding IsPriorityNormal}"
-                                    Classes.priorityMajor="{Binding IsPriorityMajor}"
-                                    Classes.priorityCritical="{Binding IsPriorityCritical}"
-                                    Classes.rejectedState="{Binding IsRejected}"
-                                    HorizontalAlignment="Left"
-                                    Padding="6,1"
-                                    CornerRadius="10"
-                                    BorderThickness="1">
-                                <TextBlock Text="{Binding PriorityLabel}"
-                                           FontSize="10"
-                                           FontWeight="SemiBold"
-                                           Opacity="0.9" />
-                            </Border>
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <TextBlock Text="{Binding DueDateLabel}"
-                                           IsVisible="{Binding HasDueDate}"
-                                           Opacity="0.75"
-                                           FontSize="11" />
-                                <Border IsVisible="{Binding IsRejected}"
+                                <Border Classes="priorityChip"
+                                        Classes.priorityMinor="{Binding IsPriorityMinor}"
+                                        Classes.priorityNormal="{Binding IsPriorityNormal}"
+                                        Classes.priorityMajor="{Binding IsPriorityMajor}"
+                                        Classes.priorityCritical="{Binding IsPriorityCritical}"
+                                        Classes.rejectedState="{Binding IsRejected}"
                                         HorizontalAlignment="Left"
                                         Padding="6,1"
                                         CornerRadius="10"
-                                        BorderThickness="1"
-                                        BorderBrush="#6B7078"
-                                        Background="#1F232A">
+                                        BorderThickness="1">
+                                    <TextBlock Text="{Binding PriorityLabel}"
+                                               FontSize="10"
+                                               FontWeight="SemiBold"
+                                               Opacity="0.9" />
+                                </Border>
+                                <Border Classes="rejectedChip"
+                                        IsVisible="{Binding IsRejected}"
+                                        HorizontalAlignment="Left"
+                                        Padding="6,1"
+                                        CornerRadius="10"
+                                        BorderThickness="1">
                                     <TextBlock Text="Rejected"
                                                FontSize="10"
                                                FontWeight="SemiBold"
                                                Foreground="#A8AFB9" />
                                 </Border>
                             </StackPanel>
+                            <TextBlock Text="{Binding DueDateLabel}"
+                                       IsVisible="{Binding HasDueDate}"
+                                       Opacity="0.75"
+                                       FontSize="11" />
                         </StackPanel>
                         <TextBox IsVisible="{Binding IsRenaming}"
                                  Text="{Binding RenameText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -477,6 +476,30 @@
             <Setter Property="BorderBrush" Value="#5C1B1B" />
         </Style>
 
+        <Style Selector="Button.deleteCancelButton:focus">
+            <Setter Property="Background" Value="#364452" />
+            <Setter Property="BorderBrush" Value="#AFC4E5" />
+            <Setter Property="Foreground" Value="#F4F8FF" />
+        </Style>
+
+        <Style Selector="Button.deleteCancelButton:focus /template/ ContentPresenter">
+            <Setter Property="Background" Value="#364452" />
+            <Setter Property="BorderBrush" Value="#AFC4E5" />
+            <Setter Property="Foreground" Value="#F4F8FF" />
+        </Style>
+
+        <Style Selector="Button.deleteCancelButton:focus-visible">
+            <Setter Property="Background" Value="#364452" />
+            <Setter Property="BorderBrush" Value="#AFC4E5" />
+            <Setter Property="Foreground" Value="#F4F8FF" />
+        </Style>
+
+        <Style Selector="Button.deleteCancelButton:focus-visible /template/ ContentPresenter">
+            <Setter Property="Background" Value="#364452" />
+            <Setter Property="BorderBrush" Value="#AFC4E5" />
+            <Setter Property="Foreground" Value="#F4F8FF" />
+        </Style>
+
         <Style Selector="Button.groupDirectionButton:disabled">
             <Setter Property="Opacity" Value="0.45" />
         </Style>
@@ -589,6 +612,11 @@
         <Style Selector="Border.priorityChip.rejectedState">
             <Setter Property="Background" Value="#252A31" />
             <Setter Property="BorderBrush" Value="#5A616B" />
+        </Style>
+
+        <Style Selector="Border.rejectedChip">
+            <Setter Property="Background" Value="#1F232A" />
+            <Setter Property="BorderBrush" Value="#6B7078" />
         </Style>
 
         <Style Selector="TextBlock.todoTitle.rejectedState">
@@ -1023,13 +1051,15 @@
                                 Command="{Binding SaveAddComposerTodoCommand}" />
                         <Button Content="Save and add another"
                                 Padding="12,6"
-                                Command="{Binding SaveAndAddAnotherComposerTodoCommand}" />
+                            Command="{Binding SaveAndAddAnotherComposerTodoCommand}"
+                            Click="SaveAndAddAnotherButton_OnClick" />
                     </StackPanel>
                 </StackPanel>
             </Border>
         </Border>
 
-        <Border IsVisible="{Binding IsDeleteConfirmationOpen}"
+                <Border x:Name="DeleteConfirmationOverlay"
+                    IsVisible="{Binding IsDeleteConfirmationOpen}"
                 Background="#9914181E"
                 Focusable="True">
             <Border HorizontalAlignment="Center"
@@ -1055,7 +1085,9 @@
                     <StackPanel Orientation="Horizontal"
                                 HorizontalAlignment="Right"
                                 Spacing="8">
-                        <Button Content="Cancel"
+                        <Button x:Name="DeleteConfirmationCancelButton"
+                                Classes="deleteCancelButton"
+                                Content="Cancel"
                                 Padding="12,6"
                                 Command="{Binding CancelDeleteTodoCommand}" />
                         <Button Content="Delete"
