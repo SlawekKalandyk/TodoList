@@ -98,10 +98,21 @@ public partial class MainWindowViewModel : ViewModelBase
     ];
 
     [ObservableProperty]
-    private string newTodoText = string.Empty;
+    private bool isAddComposerOpen;
 
     [ObservableProperty]
-    private TodoPriority newTodoPriority = TodoPriority.Normal;
+    [NotifyCanExecuteChangedFor(nameof(SaveAddComposerTodoCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SaveAndAddAnotherComposerTodoCommand))]
+    private string addComposerTitle = string.Empty;
+
+    [ObservableProperty]
+    private TodoPriority addComposerPriority = TodoPriority.Normal;
+
+    [ObservableProperty]
+    private DateTimeOffset? addComposerDueAtLocal;
+
+    [ObservableProperty]
+    private string addComposerNotes = string.Empty;
 
     [ObservableProperty]
     private TodoFilter selectedFilter = TodoFilter.Active;
@@ -184,6 +195,8 @@ public partial class MainWindowViewModel : ViewModelBase
         string.Equals(SelectedOrderingDirection, OrderingDirectionAscendingOption, StringComparison.Ordinal);
 
     public bool OrderDirectionDescending => !OrderDirectionAscending;
+
+    public bool CanSaveAddComposerTodo => !string.IsNullOrWhiteSpace(AddComposerTitle);
 
     public string SummaryText =>
         $"{ActiveCount} active - {CompletedCount} completed - {RejectedCount} rejected";
@@ -346,6 +359,11 @@ public partial class MainWindowViewModel : ViewModelBase
         ApplyFilter();
     }
 
+    partial void OnAddComposerTitleChanged(string value)
+    {
+        OnPropertyChanged(nameof(CanSaveAddComposerTodo));
+    }
+
     [RelayCommand]
     private void GoToPreviousPage()
     {
@@ -371,18 +389,64 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void AddTodo()
+    private void OpenAddComposer()
     {
-        var title = NewTodoText.Trim();
-        if (string.IsNullOrWhiteSpace(title))
+        if (IsAddComposerOpen)
         {
             return;
         }
 
-        _todoRepository.Add(title, NewTodoPriority);
-        NewTodoText = string.Empty;
-        ResetCurrentPageForFilterChange();
-        LoadTodos();
+        AddComposerTitle = string.Empty;
+        AddComposerPriority = TodoPriority.Normal;
+        AddComposerDueAtLocal = null;
+        AddComposerNotes = string.Empty;
+        IsAddComposerOpen = true;
+    }
+
+    [RelayCommand]
+    private void CancelAddComposer()
+    {
+        if (!IsAddComposerOpen)
+        {
+            return;
+        }
+
+        IsAddComposerOpen = false;
+        ResetAddComposerDraft();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSaveAddComposerTodo))]
+    private void SaveAddComposerTodo()
+    {
+        if (!TryCreateTodo(AddComposerTitle, AddComposerPriority, AddComposerNotes, AddComposerDueAtLocal))
+        {
+            return;
+        }
+
+        IsAddComposerOpen = false;
+        ResetAddComposerDraft();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSaveAddComposerTodo))]
+    private void SaveAndAddAnotherComposerTodo()
+    {
+        if (!TryCreateTodo(AddComposerTitle, AddComposerPriority, AddComposerNotes, AddComposerDueAtLocal))
+        {
+            return;
+        }
+
+        ResetAddComposerDraft(preservePriority: true);
+    }
+
+    [RelayCommand]
+    private void ClearAddComposerDueAtLocal()
+    {
+        if (!AddComposerDueAtLocal.HasValue)
+        {
+            return;
+        }
+
+        AddComposerDueAtLocal = null;
     }
 
     [RelayCommand]
@@ -657,6 +721,44 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         CommitRenameTodo(activeRenameTodo);
+    }
+
+    private bool TryCreateTodo(
+        string title,
+        TodoPriority priority,
+        string notes,
+        DateTimeOffset? dueAtLocal)
+    {
+        var normalizedTitle = (title ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(normalizedTitle))
+        {
+            return false;
+        }
+
+        var todoId = _todoRepository.Add(normalizedTitle, priority);
+
+        if (!string.IsNullOrEmpty(notes))
+        {
+            _todoRepository.UpdateNotes(todoId, notes);
+        }
+
+        if (dueAtLocal.HasValue)
+        {
+            _todoRepository.UpdateDueAtUtc(todoId, dueAtLocal.Value);
+        }
+
+        ResetCurrentPageForFilterChange();
+        LoadTodos();
+        return true;
+    }
+
+    private void ResetAddComposerDraft(bool preservePriority = false)
+    {
+        var previousPriority = AddComposerPriority;
+        AddComposerTitle = string.Empty;
+        AddComposerNotes = string.Empty;
+        AddComposerDueAtLocal = null;
+        AddComposerPriority = preservePriority ? previousPriority : TodoPriority.Normal;
     }
 
     private void LoadTodos()

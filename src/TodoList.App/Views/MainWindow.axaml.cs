@@ -116,6 +116,24 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (e.Key == Key.N
+            && e.KeyModifiers.HasFlag(KeyModifiers.Control)
+            && DataContext is MainWindowViewModel addComposerViewModel)
+        {
+            OpenAddComposer(addComposerViewModel);
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.Escape
+            && DataContext is MainWindowViewModel cancelComposerViewModel
+            && cancelComposerViewModel.IsAddComposerOpen)
+        {
+            cancelComposerViewModel.CancelAddComposerCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
         if (e.Key == Key.Escape
             && SearchTodoTextBox is not null
             && SearchTodoTextBox.IsKeyboardFocusWithin
@@ -125,6 +143,37 @@ public partial class MainWindow : Window
             viewModel.ClearSearchCommand.Execute(null);
             e.Handled = true;
         }
+    }
+
+    private void AddDetailsButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        OpenAddComposer(viewModel);
+        e.Handled = true;
+    }
+
+    private void OpenAddComposer(MainWindowViewModel viewModel)
+    {
+        viewModel.OpenAddComposerCommand.Execute(null);
+        FocusAddComposerTitleTextBox();
+    }
+
+    private void FocusAddComposerTitleTextBox()
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (AddComposerTitleTextBox is null || !AddComposerTitleTextBox.IsVisible)
+            {
+                return;
+            }
+
+            AddComposerTitleTextBox.Focus();
+            AddComposerTitleTextBox.SelectAll();
+        }, DispatcherPriority.Input);
     }
 
     private void FocusSearchTextBox()
@@ -380,6 +429,11 @@ public partial class MainWindow : Window
     {
         if (DataContext is not MainWindowViewModel viewModel
             || e.Source is not Visual sourceVisual)
+        {
+            return;
+        }
+
+        if (viewModel.IsAddComposerOpen)
         {
             return;
         }

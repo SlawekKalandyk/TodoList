@@ -330,8 +330,9 @@
         </Style>
     </Window.Styles>
 
-    <Border x:Name="PanelRoot" Padding="16" Classes="panelChrome" Focusable="True">
-        <Grid RowDefinitions="Auto,Auto,*,Auto,Auto,Auto" RowSpacing="12">
+    <Grid>
+        <Border x:Name="PanelRoot" Padding="16" Classes="panelChrome" Focusable="True">
+            <Grid RowDefinitions="Auto,Auto,*,Auto,Auto,Auto" RowSpacing="12">
             <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                 <TextBlock Grid.Column="0"
                            Text="Todos"
@@ -368,23 +369,12 @@
                 </ToggleButton>
             </Grid>
 
-            <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                <TextBox Grid.Column="0"
-                         Text="{Binding NewTodoText}"
-                         Watermark="Add a new task"
-                         VerticalContentAlignment="Center">
-                    <TextBox.KeyBindings>
-                        <KeyBinding Gesture="Enter" Command="{Binding AddTodoCommand}" />
-                    </TextBox.KeyBindings>
-                </TextBox>
-                <ComboBox Grid.Column="1"
-                          MinWidth="108"
-                          ItemsSource="{Binding AvailablePriorities}"
-                          SelectedItem="{Binding NewTodoPriority}" />
-                <Button Grid.Column="2"
-                        Content="Add"
+            <Grid Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                <Button Grid.Column="0"
+                        Content="Add task"
                         Padding="14,8"
-                        Command="{Binding AddTodoCommand}" />
+                        ToolTip.Tip="Ctrl+N"
+                        Click="AddDetailsButton_OnClick" />
             </Grid>
 
             <Grid Grid.Row="2" RowDefinitions="Auto,*" RowSpacing="8">
@@ -654,7 +644,100 @@
                        Classes="summaryText"
                        FontSize="12"
                        Text="{Binding SummaryText}" />
-        </Grid>
-    </Border>
+            </Grid>
+        </Border>
+
+        <Border IsVisible="{Binding IsAddComposerOpen}"
+            Background="#9914181E"
+                Focusable="True">
+            <Border HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Width="420"
+                    Margin="16"
+                    CornerRadius="10"
+                    BorderThickness="1"
+                    BorderBrush="#4C5460"
+                    Background="#23262C"
+                    Padding="14">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Add todo"
+                               FontSize="20"
+                               FontWeight="SemiBold" />
+
+                    <TextBlock Text="Title"
+                               FontSize="11"
+                               Opacity="0.8" />
+                    <TextBox x:Name="AddComposerTitleTextBox"
+                             Text="{Binding AddComposerTitle, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             Watermark="Todo title"
+                             VerticalContentAlignment="Center" />
+
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Priority"
+                                   FontSize="11"
+                                   Opacity="0.8" />
+                        <ComboBox MinWidth="120"
+                                  ItemsSource="{Binding AvailablePriorities}"
+                                  SelectedItem="{Binding AddComposerPriority}" />
+
+                        <TextBlock Text="Due date"
+                                   FontSize="11"
+                                   Opacity="0.8"
+                                   Margin="0,4,0,0" />
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
+                            <DatePicker Grid.Column="0"
+                                        Classes="todoDueDatePicker"
+                                        MinWidth="0"
+                                        HorizontalAlignment="Stretch"
+                                        MonthFormat="MMM"
+                                        SelectedDate="{Binding AddComposerDueAtLocal, Mode=TwoWay}" />
+                            <Button Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Width="32"
+                                    Height="32"
+                                    MinWidth="32"
+                                    MinHeight="32"
+                                    Padding="0"
+                                    ToolTip.Tip="Clear due date"
+                                    Command="{Binding ClearAddComposerDueAtLocalCommand}">
+                                <Path Width="12"
+                                      Height="12"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      Stretch="Uniform"
+                                      Fill="#C4CAD3"
+                                      Data="M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19M19,4H15.5L14.79,3.29C14.61,3.11 14.36,3 14.1,3H9.89C9.63,3 9.38,3.11 9.2,3.29L8.5,4H5V6H19V4Z" />
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+
+                    <TextBlock Text="Notes"
+                               FontSize="11"
+                               Opacity="0.8" />
+                    <TextBox MinHeight="96"
+                             TextWrapping="Wrap"
+                             AcceptsReturn="True"
+                             VerticalContentAlignment="Top"
+                             Watermark="Add notes..."
+                             Text="{Binding AddComposerNotes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                Spacing="8"
+                                Margin="0,6,0,0">
+                        <Button Content="Cancel"
+                                Padding="12,6"
+                                Command="{Binding CancelAddComposerCommand}" />
+                        <Button Content="Save"
+                                Padding="12,6"
+                                Command="{Binding SaveAddComposerTodoCommand}" />
+                        <Button Content="Save and add another"
+                                Padding="12,6"
+                                Command="{Binding SaveAndAddAnotherComposerTodoCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Border>
+    </Grid>
 
 </Window>
