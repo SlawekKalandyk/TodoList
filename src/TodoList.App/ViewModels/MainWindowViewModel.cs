@@ -12,6 +12,7 @@ namespace TodoList.App.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase
 {
+    private const int DefaultPageSize = 25;
     private const string NoGroupingOption = "None";
     private const string GroupByDayAddedOption = "Added day";
     private const string GroupByDueDateOption = "Due date";
@@ -25,9 +26,10 @@ public partial class MainWindowViewModel : ViewModelBase
     private static readonly TimeSpan SearchDebounceDelay = TimeSpan.FromMilliseconds(200);
 
     private readonly ITodoRepository _todoRepository;
-    private readonly List<TodoItemViewModel> _allTodos = new();
     private readonly Dictionary<long, TodoItemViewModel> _todoById = new();
     private readonly DispatcherTimer _searchDebounceTimer;
+    private int _currentPageStartIndex;
+    private int _currentPageEndIndex;
 
     public ObservableCollection<TodoItemViewModel> VisibleTodos { get; } = new();
 
@@ -87,6 +89,14 @@ public partial class MainWindowViewModel : ViewModelBase
         OrderingDirectionAscendingOption,
     ];
 
+    public IReadOnlyList<int> AvailablePageSizes { get; } =
+    [
+        10,
+        25,
+        50,
+        100,
+    ];
+
     [ObservableProperty]
     private string newTodoText = string.Empty;
 
@@ -132,6 +142,15 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private string selectedOrderingDirection = OrderingDirectionDescendingOption;
 
+    [ObservableProperty]
+    private int pageSize = DefaultPageSize;
+
+    [ObservableProperty]
+    private int currentPage = 1;
+
+    [ObservableProperty]
+    private int totalFilteredCount;
+
     public bool GroupByDayAdded =>
         string.Equals(SelectedGroupingOption, GroupByDayAddedOption, StringComparison.Ordinal);
 
@@ -169,6 +188,25 @@ public partial class MainWindowViewModel : ViewModelBase
     public string SummaryText =>
         $"{ActiveCount} active - {CompletedCount} completed - {RejectedCount} rejected";
 
+    public int TotalPages => Math.Max(1, (int)Math.Ceiling(TotalFilteredCount / (double)Math.Max(1, PageSize)));
+
+    public bool CanGoToPreviousPage => CurrentPage > 1;
+
+    public bool CanGoToNextPage => CurrentPage < TotalPages;
+
+    public string PaginationStatusText
+    {
+        get
+        {
+            if (TotalFilteredCount == 0)
+            {
+                return "No matching todos";
+            }
+
+            return $"Showing {_currentPageStartIndex}-{_currentPageEndIndex} of {TotalFilteredCount}";
+        }
+    }
+
     public bool IsStatusFilterEnabled => SelectedSmartView == TodoSmartView.None;
 
     public MainWindowViewModel(ITodoRepository todoRepository)
@@ -192,6 +230,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (SelectedSmartView == TodoSmartView.None)
         {
+            ResetCurrentPageForFilterChange();
             ApplyFilter();
         }
     }
@@ -199,24 +238,63 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnSelectedSmartViewChanged(TodoSmartView value)
     {
         OnPropertyChanged(nameof(IsStatusFilterEnabled));
+        ResetCurrentPageForFilterChange();
         ApplyFilter();
     }
 
     partial void OnSelectedPriorityFilterChanged(TodoPriorityFilter value)
     {
+        ResetCurrentPageForFilterChange();
         ApplyFilter();
     }
 
     partial void OnSearchQueryChanged(string value)
     {
         _searchDebounceTimer.Stop();
+        ResetCurrentPageForFilterChange();
         _searchDebounceTimer.Start();
     }
 
     partial void OnIncludeNotesInSearchChanged(bool value)
     {
         _searchDebounceTimer.Stop();
+        ResetCurrentPageForFilterChange();
         ApplyFilter();
+    }
+
+    partial void OnPageSizeChanged(int value)
+    {
+        if (value <= 0)
+        {
+            PageSize = DefaultPageSize;
+            return;
+        }
+
+        ResetCurrentPageForFilterChange();
+        OnPaginationStateChanged();
+        ApplyFilter();
+    }
+
+    partial void OnCurrentPageChanged(int value)
+    {
+        if (value <= 0)
+        {
+            CurrentPage = 1;
+            return;
+        }
+
+        if (value > TotalPages)
+        {
+            CurrentPage = TotalPages;
+            return;
+        }
+
+        OnPaginationStateChanged();
+    }
+
+    partial void OnTotalFilteredCountChanged(int value)
+    {
+        OnPaginationStateChanged();
     }
 
     partial void OnActiveCountChanged(int value)
@@ -242,6 +320,7 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(ShowFlatList));
         OnPropertyChanged(nameof(ShowGroupedList));
         OnPropertyChanged(nameof(IsGroupingDirectionEnabled));
+        ResetCurrentPageForFilterChange();
         ApplyFilter(rebuildInactiveBranch: true);
     }
 
@@ -249,11 +328,13 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(GroupDirectionAscending));
         OnPropertyChanged(nameof(GroupDirectionDescending));
+        ResetCurrentPageForFilterChange();
         ApplyFilter();
     }
 
     partial void OnSelectedOrderingOptionChanged(string value)
     {
+        ResetCurrentPageForFilterChange();
         ApplyFilter();
     }
 
@@ -261,6 +342,31 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(OrderDirectionAscending));
         OnPropertyChanged(nameof(OrderDirectionDescending));
+        ResetCurrentPageForFilterChange();
+        ApplyFilter();
+    }
+
+    [RelayCommand]
+    private void GoToPreviousPage()
+    {
+        if (!CanGoToPreviousPage)
+        {
+            return;
+        }
+
+        CurrentPage--;
+        ApplyFilter();
+    }
+
+    [RelayCommand]
+    private void GoToNextPage()
+    {
+        if (!CanGoToNextPage)
+        {
+            return;
+        }
+
+        CurrentPage++;
         ApplyFilter();
     }
 
@@ -275,6 +381,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         _todoRepository.Add(title, NewTodoPriority);
         NewTodoText = string.Empty;
+        ResetCurrentPageForFilterChange();
         LoadTodos();
     }
 
@@ -330,12 +437,6 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        if (!_todoById.ContainsKey(todo.Id))
-        {
-            LoadTodos();
-            return;
-        }
-
         if (todo.IsRejected)
         {
             todo.IsCompleted = false;
@@ -343,7 +444,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         _todoRepository.SetCompleted(todo.Id, todo.IsCompleted);
-        RecalculateSummaryCounts();
+        RefreshSummaryCountsFromRepository();
         ApplyFilter();
     }
 
@@ -356,15 +457,9 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         _todoRepository.Delete(todo.Id);
-
-        if (RemoveTodoFromAllTodos(todo.Id))
-        {
-            RecalculateSummaryCounts();
-            ApplyFilter();
-            return;
-        }
-
-        LoadTodos();
+        _todoById.Remove(todo.Id);
+        RefreshSummaryCountsFromRepository();
+        ApplyFilter();
     }
 
     [RelayCommand]
@@ -375,16 +470,10 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        if (!_todoById.ContainsKey(todo.Id))
-        {
-            LoadTodos();
-            return;
-        }
-
         _todoRepository.Reject(todo.Id);
         todo.IsRejected = true;
         todo.IsCompleted = false;
-        RecalculateSummaryCounts();
+        RefreshSummaryCountsFromRepository();
         ApplyFilter();
     }
 
@@ -396,16 +485,10 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        if (!_todoById.ContainsKey(todo.Id))
-        {
-            LoadTodos();
-            return;
-        }
-
         _todoRepository.Restore(todo.Id);
         todo.IsRejected = false;
         todo.IsCompleted = false;
-        RecalculateSummaryCounts();
+        RefreshSummaryCountsFromRepository();
         ApplyFilter();
     }
 
@@ -417,7 +500,7 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        foreach (var item in _allTodos)
+        foreach (var item in EnumerateLoadedTodos())
         {
             if (!ReferenceEquals(item, todo) && item.IsRenaming)
             {
@@ -438,7 +521,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         var shouldExpand = !todo.IsDetailsExpanded;
 
-        foreach (var item in _allTodos)
+        foreach (var item in EnumerateLoadedTodos())
         {
             if (!ReferenceEquals(item, todo) && item.IsDetailsExpanded)
             {
@@ -515,7 +598,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void CollapseTodoDetails()
     {
-        foreach (var item in _allTodos)
+        foreach (var item in EnumerateLoadedTodos())
         {
             if (item.IsDetailsExpanded)
             {
@@ -560,7 +643,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public void CommitActiveRename()
     {
-        var activeRenameTodo = _allTodos.FirstOrDefault(todo => todo.IsRenaming);
+        var activeRenameTodo = EnumerateLoadedTodos().FirstOrDefault(todo => todo.IsRenaming);
         if (activeRenameTodo is null)
         {
             return;
@@ -571,87 +654,207 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void LoadTodos()
     {
-        _allTodos.Clear();
         _todoById.Clear();
-
-        foreach (var todo in _todoRepository.GetAll())
-        {
-            var todoViewModel = TodoItemViewModel.From(todo);
-            _allTodos.Add(todoViewModel);
-            _todoById[todoViewModel.Id] = todoViewModel;
-        }
-
-        RecalculateSummaryCounts();
+        RefreshSummaryCountsFromRepository();
         ApplyFilter();
     }
 
-    private void RecalculateSummaryCounts()
+    private void RefreshSummaryCountsFromRepository()
     {
-        ActiveCount = _allTodos.Count(todo => !todo.IsCompleted && !todo.IsRejected);
-        CompletedCount = _allTodos.Count(todo => todo.IsCompleted && !todo.IsRejected);
-        RejectedCount = _allTodos.Count(todo => todo.IsRejected);
-    }
-
-    private bool RemoveTodoFromAllTodos(long todoId)
-    {
-        var index = _allTodos.FindIndex(todo => todo.Id == todoId);
-        if (index < 0)
-        {
-            return false;
-        }
-
-        var todoToRemove = _allTodos[index];
-        _allTodos.RemoveAt(index);
-        _todoById.Remove(todoToRemove.Id);
-        return true;
+        var summaryCounts = _todoRepository.GetSummaryCounts();
+        ActiveCount = summaryCounts.ActiveCount;
+        CompletedCount = summaryCounts.CompletedCount;
+        RejectedCount = summaryCounts.RejectedCount;
     }
 
     private void ApplyFilter(bool rebuildInactiveBranch = false)
     {
-        if (!TryGetFilteredTodosFromRepository(out var filteredList))
-        {
-            return;
-        }
+        var queryOptions = BuildTodoQueryOptions();
+        TotalFilteredCount = _todoRepository.QueryCount(queryOptions);
+        EnsureCurrentPageWithinRange();
 
+        var safePageSize = Math.Max(1, PageSize);
+        var pageOffset = (CurrentPage - 1) * safePageSize;
         if (ShowFlatList)
         {
-            RefreshVisibleTodos(filteredList);
-            if (rebuildInactiveBranch)
+            IReadOnlyList<TodoItem> pageTodos = TotalFilteredCount == 0
+                ? Array.Empty<TodoItem>()
+                : _todoRepository.QueryPage(queryOptions, safePageSize, pageOffset);
+
+            var pagedFilteredList = BuildTodoViewModels(pageTodos);
+
+            if (pagedFilteredList.Count == 0)
             {
-                RebuildGroupedRows(filteredList);
+                SetCurrentPageRange(0, 0);
+            }
+            else
+            {
+                SetCurrentPageRange(pageOffset + 1, pageOffset + pagedFilteredList.Count);
             }
 
+            RefreshVisibleTodos(pagedFilteredList);
+            if (rebuildInactiveBranch)
+            {
+                RebuildGroupedRows(pagedFilteredList);
+            }
+
+            OnPaginationStateChanged();
             return;
         }
 
-        RebuildGroupedRows(filteredList);
+        var groupedPagedTodos = BuildGroupedPageTodos(queryOptions, safePageSize, pageOffset);
+
+        if (groupedPagedTodos.Count == 0)
+        {
+            SetCurrentPageRange(0, 0);
+        }
+        else
+        {
+            SetCurrentPageRange(pageOffset + 1, pageOffset + groupedPagedTodos.Count);
+        }
+
+        RebuildGroupedRows(groupedPagedTodos);
         if (rebuildInactiveBranch)
         {
-            RefreshVisibleTodos(filteredList);
+            RefreshVisibleTodos(groupedPagedTodos);
         }
+
+        OnPaginationStateChanged();
     }
 
-    private bool TryGetFilteredTodosFromRepository(out List<TodoItemViewModel> filteredTodos)
+    private List<TodoItemViewModel> BuildGroupedPageTodos(
+        TodoQueryOptions queryOptions,
+        int pageSize,
+        int pageOffset)
     {
-        var queryOptions = BuildTodoQueryOptions();
-        var filteredTodoIds = _todoRepository.QueryIds(queryOptions);
-
-        filteredTodos = new List<TodoItemViewModel>(filteredTodoIds.Count);
-
-        foreach (var todoId in filteredTodoIds)
+        if (TotalFilteredCount == 0)
         {
-            if (_todoById.TryGetValue(todoId, out var todo))
+            return new List<TodoItemViewModel>();
+        }
+
+        var allFilteredTodos = _todoRepository.QueryPage(queryOptions, TotalFilteredCount, 0);
+        var allFilteredTodoViewModels = BuildTodoViewModels(allFilteredTodos);
+        var groupedOrderedTodos = BuildGroupedOrderedTodos(allFilteredTodoViewModels);
+        return TakePage(groupedOrderedTodos, pageSize, pageOffset);
+    }
+
+    private List<TodoItemViewModel> BuildGroupedOrderedTodos(IReadOnlyList<TodoItemViewModel> todos)
+    {
+        var orderedTodos = new List<TodoItemViewModel>(todos.Count);
+
+        if (GroupByDayAdded)
+        {
+            var groupedTodos = todos.GroupBy(todo => todo.CreatedAtUtc.ToLocalTime().Date);
+            var orderedGroups = GroupDirectionAscending
+                ? groupedTodos.OrderBy(group => group.Key)
+                : groupedTodos.OrderByDescending(group => group.Key);
+
+            foreach (var group in orderedGroups)
             {
-                filteredTodos.Add(todo);
+                orderedTodos.AddRange(group);
+            }
+
+            return orderedTodos;
+        }
+
+        if (GroupByDueDate)
+        {
+            var groupedTodos = todos.GroupBy(todo => todo.DueAtUtc?.Date);
+
+            var orderedGroups = GroupDirectionAscending
+                ? groupedTodos
+                    .OrderBy(group => group.Key.HasValue ? 0 : 1)
+                    .ThenBy(group => group.Key ?? DateTime.MaxValue)
+                : groupedTodos
+                    .OrderBy(group => group.Key.HasValue ? 0 : 1)
+                    .ThenByDescending(group => group.Key ?? DateTime.MinValue);
+
+            foreach (var group in orderedGroups)
+            {
+                orderedTodos.AddRange(group);
+            }
+
+            return orderedTodos;
+        }
+
+        if (GroupByPriority)
+        {
+            var groupedTodos = todos.GroupBy(todo => todo.Priority);
+            var orderedGroups = GroupDirectionAscending
+                ? groupedTodos.OrderBy(group => group.Key)
+                : groupedTodos.OrderByDescending(group => group.Key);
+
+            foreach (var group in orderedGroups)
+            {
+                orderedTodos.AddRange(group);
+            }
+
+            return orderedTodos;
+        }
+
+        orderedTodos.AddRange(todos);
+        return orderedTodos;
+    }
+
+    private static List<TodoItemViewModel> TakePage(
+        IReadOnlyList<TodoItemViewModel> todos,
+        int pageSize,
+        int pageOffset)
+    {
+        if (pageOffset >= todos.Count)
+        {
+            return new List<TodoItemViewModel>();
+        }
+
+        var endExclusive = Math.Min(pageOffset + pageSize, todos.Count);
+        var page = new List<TodoItemViewModel>(endExclusive - pageOffset);
+
+        for (var index = pageOffset; index < endExclusive; index++)
+        {
+            page.Add(todos[index]);
+        }
+
+        return page;
+    }
+
+    private List<TodoItemViewModel> BuildTodoViewModels(IReadOnlyList<TodoItem> todos)
+    {
+        var pageViewModels = new List<TodoItemViewModel>(todos.Count);
+
+        foreach (var todo in todos)
+        {
+            if (_todoById.TryGetValue(todo.Id, out var existingViewModel))
+            {
+                UpdateTodoViewModel(existingViewModel, todo);
+                pageViewModels.Add(existingViewModel);
                 continue;
             }
 
-            LoadTodos();
-            filteredTodos = new List<TodoItemViewModel>();
-            return false;
+            var viewModel = TodoItemViewModel.From(todo);
+            _todoById[viewModel.Id] = viewModel;
+            pageViewModels.Add(viewModel);
         }
 
-        return true;
+        return pageViewModels;
+    }
+
+    private static void UpdateTodoViewModel(TodoItemViewModel viewModel, TodoItem todo)
+    {
+        if (!viewModel.IsRenaming)
+        {
+            viewModel.Title = todo.Title;
+        }
+
+        viewModel.Notes = todo.Notes;
+        viewModel.Priority = todo.Priority;
+        viewModel.DueAtUtc = todo.DueAtUtc?.ToLocalTime();
+        viewModel.IsCompleted = todo.IsCompleted;
+        viewModel.IsRejected = todo.IsRejected;
+    }
+
+    private IEnumerable<TodoItemViewModel> EnumerateLoadedTodos()
+    {
+        return _todoById.Values;
     }
 
     private TodoQueryOptions BuildTodoQueryOptions()
@@ -692,6 +895,36 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         var localStart = DateTime.SpecifyKind(localDate.Date, DateTimeKind.Local);
         return new DateTimeOffset(localStart).ToUniversalTime().ToUnixTimeSeconds();
+    }
+
+    private void ResetCurrentPageForFilterChange()
+    {
+        if (CurrentPage != 1)
+        {
+            CurrentPage = 1;
+        }
+    }
+
+    private void EnsureCurrentPageWithinRange()
+    {
+        if (CurrentPage > TotalPages)
+        {
+            CurrentPage = TotalPages;
+        }
+    }
+
+    private void SetCurrentPageRange(int startIndex, int endIndex)
+    {
+        _currentPageStartIndex = startIndex;
+        _currentPageEndIndex = endIndex;
+    }
+
+    private void OnPaginationStateChanged()
+    {
+        OnPropertyChanged(nameof(TotalPages));
+        OnPropertyChanged(nameof(CanGoToPreviousPage));
+        OnPropertyChanged(nameof(CanGoToNextPage));
+        OnPropertyChanged(nameof(PaginationStatusText));
     }
 
     private void RebuildGroupedRows(IReadOnlyList<TodoItemViewModel> todos)

@@ -34,17 +34,29 @@ public sealed class SqliteTodoRepository : ITodoRepository
         EnsureSchema();
     }
 
-    public IReadOnlyList<TodoItem> GetAll()
+    public IReadOnlyList<TodoItem> QueryPage(TodoQueryOptions options, int limit, int offset)
     {
-        using var connection = OpenConnection();
-        const string sql =
-            """
-            SELECT Id, Title, Notes, Priority, IsCompleted, IsRejected, CreatedAtUtc, CompletedAtUtc, DueAtUtc
-            FROM Todos
-            ORDER BY IsRejected ASC, IsCompleted ASC, Priority DESC, CreatedAtUtc DESC, Id DESC;
-            """;
+        ArgumentNullException.ThrowIfNull(options);
 
-        var rows = connection.Query<TodoRow>(sql);
+        if (limit <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(limit), "Page size must be greater than zero.");
+        }
+
+        if (offset < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(offset), "Page offset cannot be negative.");
+        }
+
+        using var connection = OpenConnection();
+
+        var parameters = new DynamicParameters();
+        var predicates = BuildPredicates(options, parameters);
+        parameters.Add("limit", limit);
+        parameters.Add("offset", offset);
+
+        var sql = BuildFilteredTodoPageQuery(options, predicates);
+        var rows = connection.Query<TodoRow>(sql, parameters);
         var todos = new List<TodoItem>();
 
         foreach (var row in rows)
@@ -55,22 +67,40 @@ public sealed class SqliteTodoRepository : ITodoRepository
         return todos;
     }
 
-    public IReadOnlyList<long> QueryIds(TodoQueryOptions options)
+    public int QueryCount(TodoQueryOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
 
         using var connection = OpenConnection();
 
         var parameters = new DynamicParameters();
-        var predicates = new List<string>();
+        var predicates = BuildPredicates(options, parameters);
+        var sql = BuildFilteredCountQuery(predicates);
 
-        ApplySmartViewPredicates(options, predicates, parameters);
-        ApplyStatusPredicates(options, predicates);
-        ApplyPriorityPredicates(options, predicates, parameters);
-        ApplySearchPredicates(options, predicates, parameters);
+        return connection.QuerySingle<int>(sql, parameters);
+    }
 
-        var sql = BuildFilteredIdQuery(options, predicates);
-        return connection.Query<long>(sql, parameters).AsList();
+    public TodoStatusCounts GetSummaryCounts()
+    {
+        using var connection = OpenConnection();
+
+        const string sql =
+            """
+            SELECT
+                COALESCE(SUM(CASE WHEN IsCompleted = 0 AND IsRejected = 0 THEN 1 ELSE 0 END), 0) AS ActiveCount,
+                COALESCE(SUM(CASE WHEN IsCompleted = 1 AND IsRejected = 0 THEN 1 ELSE 0 END), 0) AS CompletedCount,
+                COALESCE(SUM(CASE WHEN IsRejected = 1 THEN 1 ELSE 0 END), 0) AS RejectedCount
+            FROM Todos;
+            """;
+
+        var row = connection.QuerySingle<SummaryCountsRow>(sql);
+
+        return new TodoStatusCounts
+        {
+            ActiveCount = checked((int)row.ActiveCount),
+            CompletedCount = checked((int)row.CompletedCount),
+            RejectedCount = checked((int)row.RejectedCount),
+        };
     }
 
     public long Add(string title, TodoPriority priority)
@@ -233,6 +263,18 @@ public sealed class SqliteTodoRepository : ITodoRepository
         return connection.Execute("DELETE FROM Todos WHERE IsCompleted = 1 AND IsRejected = 0;");
     }
 
+    private static List<string> BuildPredicates(TodoQueryOptions options, DynamicParameters parameters)
+    {
+        var predicates = new List<string>();
+
+        ApplySmartViewPredicates(options, predicates, parameters);
+        ApplyStatusPredicates(options, predicates);
+        ApplyPriorityPredicates(options, predicates, parameters);
+        ApplySearchPredicates(options, predicates, parameters);
+
+        return predicates;
+    }
+
     private static void ApplySmartViewPredicates(
         TodoQueryOptions options,
         ICollection<string> predicates,
@@ -333,12 +375,12 @@ public sealed class SqliteTodoRepository : ITodoRepository
         predicates.Add("Title LIKE @searchPattern ESCAPE '\\' COLLATE NOCASE");
     }
 
-    private static string BuildFilteredIdQuery(
+    private static string BuildFilteredTodoPageQuery(
         TodoQueryOptions options,
         IReadOnlyCollection<string> predicates)
     {
         var sql = new StringBuilder();
-        sql.AppendLine("SELECT Id");
+        sql.AppendLine("SELECT Id, Title, Notes, Priority, IsCompleted, IsRejected, CreatedAtUtc, CompletedAtUtc, DueAtUtc");
         sql.AppendLine("FROM Todos");
 
         if (predicates.Count > 0)
@@ -347,6 +389,22 @@ public sealed class SqliteTodoRepository : ITodoRepository
         }
 
         sql.AppendLine("ORDER BY " + BuildOrderByClause(options));
+        sql.AppendLine("LIMIT @limit");
+        sql.AppendLine("OFFSET @offset;");
+        return sql.ToString();
+    }
+
+    private static string BuildFilteredCountQuery(IReadOnlyCollection<string> predicates)
+    {
+        var sql = new StringBuilder();
+        sql.AppendLine("SELECT COUNT(1)");
+        sql.AppendLine("FROM Todos");
+
+        if (predicates.Count > 0)
+        {
+            sql.AppendLine("WHERE " + string.Join(" AND ", predicates));
+        }
+
         sql.Append(';');
         return sql.ToString();
     }
@@ -564,5 +622,14 @@ public sealed class SqliteTodoRepository : ITodoRepository
     private sealed class TableInfoRow
     {
         public string Name { get; init; } = string.Empty;
+    }
+
+    private sealed class SummaryCountsRow
+    {
+        public long ActiveCount { get; init; }
+
+        public long CompletedCount { get; init; }
+
+        public long RejectedCount { get; init; }
     }
 }

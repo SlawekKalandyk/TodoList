@@ -6,9 +6,11 @@ namespace TodoList.App.Data;
 
 public interface ITodoRepository
 {
-    IReadOnlyList<TodoItem> GetAll();
+    IReadOnlyList<TodoItem> QueryPage(TodoQueryOptions options, int limit, int offset);
 
-    IReadOnlyList<long> QueryIds(TodoQueryOptions options);
+    int QueryCount(TodoQueryOptions options);
+
+    TodoStatusCounts GetSummaryCounts();
 
     long Add(string title, TodoPriority priority);
 

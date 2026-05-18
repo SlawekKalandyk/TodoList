@@ -286,6 +286,10 @@
             <Setter Property="Foreground" Value="#C4CAD3" />
         </Style>
 
+        <Style Selector="Button.groupDirectionButton:disabled">
+            <Setter Property="Opacity" Value="0.45" />
+        </Style>
+
         <Style Selector="Border.groupedTodoRow">
             <Setter Property="Background" Value="Transparent" />
         </Style>
@@ -296,7 +300,7 @@
     </Window.Styles>
 
     <Border x:Name="PanelRoot" Padding="16" Classes="panelChrome" Focusable="True">
-        <Grid RowDefinitions="Auto,Auto,*,Auto,Auto" RowSpacing="12">
+        <Grid RowDefinitions="Auto,Auto,*,Auto,Auto,Auto" RowSpacing="12">
             <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                 <TextBlock Grid.Column="0"
                            Text="Todos"
@@ -425,6 +429,7 @@
                                     MinWidth="36"
                                     MinHeight="32"
                                     Padding="0"
+                                    Classes="groupDirectionButton"
                                     HorizontalAlignment="Left"
                                     IsEnabled="{Binding IsGroupingDirectionEnabled}"
                                     ToolTip.Tip="Ascending group order (click to set descending)"
@@ -445,6 +450,7 @@
                                     MinWidth="36"
                                     MinHeight="32"
                                     Padding="0"
+                                    Classes="groupDirectionButton"
                                     HorizontalAlignment="Left"
                                     IsEnabled="{Binding IsGroupingDirectionEnabled}"
                                     ToolTip.Tip="Descending group order (click to set ascending)"
@@ -563,7 +569,57 @@
                                                 Command="{Binding ClearSearchCommand}" />
                         </Grid>
 
-                        <TextBlock Grid.Row="4"
+                        <Grid Grid.Row="4"
+                                    ColumnDefinitions="Auto,Auto,Auto,*,Auto"
+                                    ColumnSpacing="8">
+                                <TextBlock Grid.Column="0"
+                                                   Text="Page size"
+                                                   Opacity="0.85"
+                                                   VerticalAlignment="Center" />
+                                <ComboBox Grid.Column="1"
+                                                  Width="90"
+                                                  ItemsSource="{Binding AvailablePageSizes}"
+                                                  SelectedItem="{Binding PageSize}" />
+                                  <Button Grid.Column="2"
+                                            Width="36"
+                                            Height="32"
+                                            MinWidth="36"
+                                            MinHeight="32"
+                                            Padding="0"
+                                            IsEnabled="{Binding CanGoToPreviousPage}"
+                                            Command="{Binding GoToPreviousPageCommand}">
+                                    <Path Width="14"
+                                        Height="14"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Stretch="Uniform"
+                                        Fill="#C4CAD3"
+                                        Data="M15.5,3L6.5,12L15.5,21V3Z" />
+                                  </Button>
+                                <TextBlock Grid.Column="3"
+                                                   Text="{Binding PaginationStatusText}"
+                                                   Opacity="0.85"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center" />
+                                  <Button Grid.Column="4"
+                                            Width="36"
+                                            Height="32"
+                                            MinWidth="36"
+                                            MinHeight="32"
+                                            Padding="0"
+                                            IsEnabled="{Binding CanGoToNextPage}"
+                                            Command="{Binding GoToNextPageCommand}">
+                                    <Path Width="14"
+                                        Height="14"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Stretch="Uniform"
+                                        Fill="#C4CAD3"
+                                        Data="M8.5,3L17.5,12L8.5,21V3Z" />
+                                  </Button>
+                        </Grid>
+
+                        <TextBlock Grid.Row="5"
                        Classes="summaryText"
                        FontSize="12"
                        Text="{Binding SummaryText}" />
