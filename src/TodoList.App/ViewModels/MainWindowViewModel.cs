@@ -47,6 +47,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [
         new SmartViewOption(TodoSmartView.None, "None"),
         new SmartViewOption(TodoSmartView.Today, "Due today"),
+        new SmartViewOption(TodoSmartView.DueSoon3Days, "Due soon (3 days)"),
         new SmartViewOption(TodoSmartView.DueSoon, "Due soon (7 days)"),
         new SmartViewOption(TodoSmartView.Overdue, "Overdue"),
     ];
@@ -1031,6 +1032,7 @@ public partial class MainWindowViewModel : ViewModelBase
             OrderAscending = OrderDirectionAscending,
             TodayStartUtcUnix = LocalDateStartToUtcUnix(today),
             TomorrowStartUtcUnix = LocalDateStartToUtcUnix(today.AddDays(1)),
+            DueSoonThreeDaysEndExclusiveUtcUnix = LocalDateStartToUtcUnix(today.AddDays(4)),
             DueSoonEndExclusiveUtcUnix = LocalDateStartToUtcUnix(today.AddDays(8)),
         };
     }

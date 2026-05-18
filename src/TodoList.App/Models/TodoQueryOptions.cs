@@ -20,5 +20,7 @@ public sealed class TodoQueryOptions
 
     public long TomorrowStartUtcUnix { get; init; }
 
+    public long DueSoonThreeDaysEndExclusiveUtcUnix { get; init; }
+
     public long DueSoonEndExclusiveUtcUnix { get; init; }
 }

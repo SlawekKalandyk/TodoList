@@ -28,6 +28,7 @@ TodoList is an Avalonia desktop todo app that runs as a tray-first right-side pa
 - Smart views:
   - None
   - Due today
+  - Due soon (3 days, includes today)
   - Due soon (next 7 days)
   - Overdue
 - Filters combine with AND semantics:

@@ -304,10 +304,20 @@ public sealed class SqliteTodoRepository : ITodoRepository
                 predicates.Add("IsCompleted = 0");
                 predicates.Add("IsRejected = 0");
                 predicates.Add("DueAtUtc IS NOT NULL");
-                predicates.Add("DueAtUtc >= @tomorrowStartUtc");
+                predicates.Add("DueAtUtc >= @todayStartUtc");
                 predicates.Add("DueAtUtc < @dueSoonEndExclusiveUtc");
-                parameters.Add("tomorrowStartUtc", options.TomorrowStartUtcUnix);
+                parameters.Add("todayStartUtc", options.TodayStartUtcUnix);
                 parameters.Add("dueSoonEndExclusiveUtc", options.DueSoonEndExclusiveUtcUnix);
+                break;
+
+            case TodoSmartView.DueSoon3Days:
+                predicates.Add("IsCompleted = 0");
+                predicates.Add("IsRejected = 0");
+                predicates.Add("DueAtUtc IS NOT NULL");
+                predicates.Add("DueAtUtc >= @todayStartUtc");
+                predicates.Add("DueAtUtc < @dueSoonThreeDaysEndExclusiveUtc");
+                parameters.Add("todayStartUtc", options.TodayStartUtcUnix);
+                parameters.Add("dueSoonThreeDaysEndExclusiveUtc", options.DueSoonThreeDaysEndExclusiveUtcUnix);
                 break;
         }
     }

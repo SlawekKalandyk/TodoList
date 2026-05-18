@@ -60,8 +60,8 @@ Use `CONFIG`, `RID`, and `PUBLISH_ROOT` overrides when needed.
   - Keep window min/max aligned with this range (480/1200) or right-edge snapping can drift on multi-monitor setups.
 - Filtering uses AND semantics across smart view, status (when enabled), priority, and search.
 - Smart view behavior is intentional: when `SelectedSmartView != TodoSmartView.None`, status filter is disabled (`IsStatusFilterEnabled == false`).
-- Current smart views (enum order) are `None`, `Today`, `Overdue`, and `DueSoon` in [src/TodoList.App/Models/TodoSmartView.cs](src/TodoList.App/Models/TodoSmartView.cs).
-- UI display order is intentionally `None`, `Due today`, `Due soon (7 days)`, then `Overdue`.
+- Current smart views (enum order) are `None`, `Today`, `Overdue`, `DueSoon`, and `DueSoon3Days` in [src/TodoList.App/Models/TodoSmartView.cs](src/TodoList.App/Models/TodoSmartView.cs).
+- UI display order is intentionally `None`, `Due today`, `Due soon (3 days)`, `Due soon (7 days)`, then `Overdue`.
 - Grouping/ordering option strings in [src/TodoList.App/ViewModels/MainWindowViewModel.cs](src/TodoList.App/ViewModels/MainWindowViewModel.cs) must stay aligned with validation in [src/TodoList.App/App.axaml.cs](src/TodoList.App/App.axaml.cs) (`SanitizeSettings`).
   - Update both the arrays in `App.axaml.cs` and the private option constants in `MainWindowViewModel.cs`; mismatches cause settings values to be sanitized back to defaults.
 - [src/TodoList.App/Models/TodoFilter.cs](src/TodoList.App/Models/TodoFilter.cs) still contains legacy priority values for settings migration.
