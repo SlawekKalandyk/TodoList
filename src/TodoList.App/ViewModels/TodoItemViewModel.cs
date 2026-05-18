@@ -30,6 +30,62 @@ public sealed partial class TodoItemViewModel : ObservableObject
 
     public string DueDateLabel => DueAtUtc?.ToLocalTime().ToString("dd MMM yyyy") ?? string.Empty;
 
+    private int? DueDateDaysFromToday
+    {
+        get
+        {
+            if (!DueAtUtc.HasValue)
+            {
+                return null;
+            }
+
+            return (DueAtUtc.Value.Date - DateTime.Now.Date).Days;
+        }
+    }
+
+    public bool ShowUrgencyChip
+    {
+        get
+        {
+            var dayOffset = DueDateDaysFromToday;
+            return !IsRejected && !IsCompleted && dayOffset.HasValue && dayOffset.Value <= 7;
+        }
+    }
+
+    public bool IsUrgencyOverdue => ShowUrgencyChip && DueDateDaysFromToday < 0;
+
+    public bool IsUrgencyToday => ShowUrgencyChip && DueDateDaysFromToday == 0;
+
+    public bool IsUrgencySoon => ShowUrgencyChip && DueDateDaysFromToday is > 0 and <= 3;
+
+    public bool IsUrgencyUpcoming => ShowUrgencyChip && DueDateDaysFromToday is > 3 and <= 7;
+
+    public string UrgencyLabel
+    {
+        get
+        {
+            if (!ShowUrgencyChip)
+            {
+                return string.Empty;
+            }
+
+            var dayOffset = DueDateDaysFromToday ?? int.MaxValue;
+
+            if (dayOffset < 0)
+            {
+                var overdueDays = Math.Abs(dayOffset);
+                return overdueDays == 1 ? "1d overdue" : $"{overdueDays}d overdue";
+            }
+
+            if (dayOffset == 0)
+            {
+                return "Due today";
+            }
+
+            return dayOffset == 1 ? "Due in 1d" : $"Due in {dayOffset}d";
+        }
+    }
+
     public string CreatedAtLabel => CreatedAtUtc.ToLocalTime().ToString("dd MMM yyyy HH:mm");
 
     [ObservableProperty]
@@ -97,6 +153,12 @@ public sealed partial class TodoItemViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(CanToggleCompleted));
         OnPropertyChanged(nameof(CanReject));
+        OnUrgencyPropertiesChanged();
+    }
+
+    partial void OnIsCompletedChanged(bool value)
+    {
+        OnUrgencyPropertiesChanged();
     }
 
     partial void OnIsRenamingChanged(bool value)
@@ -117,6 +179,7 @@ public sealed partial class TodoItemViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(HasDueDate));
         OnPropertyChanged(nameof(DueDateLabel));
+        OnUrgencyPropertiesChanged();
     }
 
     partial void OnTitleChanged(string value)
@@ -137,5 +200,15 @@ public sealed partial class TodoItemViewModel : ObservableObject
     {
         RenameText = Title;
         IsRenaming = false;
+    }
+
+    private void OnUrgencyPropertiesChanged()
+    {
+        OnPropertyChanged(nameof(ShowUrgencyChip));
+        OnPropertyChanged(nameof(IsUrgencyOverdue));
+        OnPropertyChanged(nameof(IsUrgencyToday));
+        OnPropertyChanged(nameof(IsUrgencySoon));
+        OnPropertyChanged(nameof(IsUrgencyUpcoming));
+        OnPropertyChanged(nameof(UrgencyLabel));
     }
 }

@@ -66,6 +66,22 @@
                                                FontWeight="SemiBold"
                                                Opacity="0.9" />
                                 </Border>
+                                <Border Classes="urgencyChip"
+                                        Classes.overdue="{Binding IsUrgencyOverdue}"
+                                        Classes.today="{Binding IsUrgencyToday}"
+                                        Classes.soon="{Binding IsUrgencySoon}"
+                                        Classes.upcoming="{Binding IsUrgencyUpcoming}"
+                                        IsVisible="{Binding ShowUrgencyChip}"
+                                        HorizontalAlignment="Left"
+                                        Padding="6,1"
+                                        CornerRadius="10"
+                                        BorderThickness="1"
+                                        VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding UrgencyLabel}"
+                                               FontSize="10"
+                                               FontWeight="SemiBold"
+                                               Opacity="0.95" />
+                                </Border>
                                 <Border Classes="rejectedChip"
                                         IsVisible="{Binding IsRejected}"
                                         HorizontalAlignment="Left"
@@ -81,7 +97,8 @@
                             <TextBlock Text="{Binding DueDateLabel}"
                                        IsVisible="{Binding HasDueDate}"
                                        Opacity="0.75"
-                                       FontSize="11" />
+                                       FontSize="11"
+                                       VerticalAlignment="Center" />
                         </StackPanel>
                         <TextBox IsVisible="{Binding IsRenaming}"
                                  Text="{Binding RenameText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -617,6 +634,31 @@
         <Style Selector="Border.rejectedChip">
             <Setter Property="Background" Value="#1F232A" />
             <Setter Property="BorderBrush" Value="#6B7078" />
+        </Style>
+
+        <Style Selector="Border.urgencyChip">
+            <Setter Property="Background" Value="#223244" />
+            <Setter Property="BorderBrush" Value="#456280" />
+        </Style>
+
+        <Style Selector="Border.urgencyChip.overdue">
+            <Setter Property="Background" Value="#4A2323" />
+            <Setter Property="BorderBrush" Value="#B73A3A" />
+        </Style>
+
+        <Style Selector="Border.urgencyChip.today">
+            <Setter Property="Background" Value="#3A2A2A" />
+            <Setter Property="BorderBrush" Value="#7A4646" />
+        </Style>
+
+        <Style Selector="Border.urgencyChip.soon">
+            <Setter Property="Background" Value="#3B3227" />
+            <Setter Property="BorderBrush" Value="#7A6140" />
+        </Style>
+
+        <Style Selector="Border.urgencyChip.upcoming">
+            <Setter Property="Background" Value="#223244" />
+            <Setter Property="BorderBrush" Value="#456280" />
         </Style>
 
         <Style Selector="TextBlock.todoTitle.rejectedState">
