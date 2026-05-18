@@ -15,6 +15,14 @@ public sealed partial class TodoItemViewModel : ObservableObject
 
     public string PriorityLabel => Priority.ToString();
 
+    public bool IsPriorityMinor => Priority == TodoPriority.Minor;
+
+    public bool IsPriorityNormal => Priority == TodoPriority.Normal;
+
+    public bool IsPriorityMajor => Priority == TodoPriority.Major;
+
+    public bool IsPriorityCritical => Priority == TodoPriority.Critical;
+
     [ObservableProperty]
     private DateTimeOffset? dueAtUtc;
 
@@ -99,6 +107,10 @@ public sealed partial class TodoItemViewModel : ObservableObject
     partial void OnPriorityChanged(TodoPriority value)
     {
         OnPropertyChanged(nameof(PriorityLabel));
+        OnPropertyChanged(nameof(IsPriorityMinor));
+        OnPropertyChanged(nameof(IsPriorityNormal));
+        OnPropertyChanged(nameof(IsPriorityMajor));
+        OnPropertyChanged(nameof(IsPriorityCritical));
     }
 
     partial void OnDueAtUtcChanged(DateTimeOffset? value)
