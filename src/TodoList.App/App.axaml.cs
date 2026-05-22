@@ -19,6 +19,7 @@ namespace TodoList.App;
 public partial class App : Application
 {
     private static readonly TimeSpan SettingsSaveDebounceDelay = TimeSpan.FromMilliseconds(350);
+    private static readonly TimeSpan TrayClickReopenSuppressionWindow = TimeSpan.FromMilliseconds(300);
 
     private static readonly string[] AvailableGroupingOptions =
     [
@@ -52,6 +53,7 @@ public partial class App : Application
     private DispatcherTimer? _settingsSaveDebounceTimer;
     private bool _hasPendingSettingsSave;
     private bool _isExitRequested;
+    private DateTimeOffset _lastMainWindowClosedAtUtc = DateTimeOffset.MinValue;
 
     public override void Initialize()
     {
@@ -372,6 +374,12 @@ public partial class App : Application
 
     private void TrayIcon_OnClicked(object? sender, EventArgs e)
     {
+        if (_mainWindow is null
+            && DateTimeOffset.UtcNow - _lastMainWindowClosedAtUtc <= TrayClickReopenSuppressionWindow)
+        {
+            return;
+        }
+
         ToggleMainWindowVisibility();
     }
 
@@ -413,6 +421,7 @@ public partial class App : Application
 
         _mainWindow = null;
         _mainWindowViewModel = null;
+        _lastMainWindowClosedAtUtc = DateTimeOffset.UtcNow;
     }
 
     private void ToggleMainWindowVisibility()
