@@ -48,6 +48,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         DeleteConfirmationOverlay.PropertyChanged += DeleteConfirmationOverlay_OnPropertyChanged;
         AddHandler(KeyDownEvent, MainWindow_OnKeyDown, RoutingStrategies.Tunnel, handledEventsToo: true);
+        AddHandler(KeyDownEvent, MainWindow_OnKeyDownBubble, RoutingStrategies.Bubble);
         AddHandler(PointerPressedEvent, MainWindow_OnPointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
         AddHandler(TappedEvent, MainWindow_OnTapped, RoutingStrategies.Bubble, handledEventsToo: true);
 
@@ -155,7 +156,20 @@ public partial class MainWindow : Window
         {
             viewModel.ClearSearchCommand.Execute(null);
             e.Handled = true;
+            return;
         }
+
+    }
+
+    private void MainWindow_OnKeyDownBubble(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape || DataContext is not MainWindowViewModel)
+        {
+            return;
+        }
+
+        Close();
+        e.Handled = true;
     }
 
     private void AddDetailsButton_OnClick(object? sender, RoutedEventArgs e)
