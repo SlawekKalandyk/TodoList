@@ -159,6 +159,14 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (e.Key == Key.F2
+            && DataContext is MainWindowViewModel renameViewModel
+            && TryStartRenameForFocusedTodo(renameViewModel))
+        {
+            e.Handled = true;
+            return;
+        }
+
     }
 
     private void MainWindow_OnKeyDownBubble(object? sender, KeyEventArgs e)
@@ -326,17 +334,49 @@ public partial class MainWindow : Window
             return;
         }
 
+        var rowBorder = FindTodoRowAncestor(renameButton);
+        if (rowBorder is null)
+        {
+            return;
+        }
+
+        StartRenameAndFocusTextBox(viewModel, todo, rowBorder);
+        e.Handled = true;
+    }
+
+    private bool TryStartRenameForFocusedTodo(MainWindowViewModel viewModel)
+    {
+        var focused = FocusManager?.GetFocusedElement() as Visual;
+        if (focused is null)
+        {
+            return false;
+        }
+
+        var rowBorder = FindFocusedTodoRow(focused);
+        if (rowBorder?.DataContext is not TodoItemViewModel todo)
+        {
+            return false;
+        }
+
+        if (todo.IsRenaming)
+        {
+            return true;
+        }
+
+        StartRenameAndFocusTextBox(viewModel, todo, rowBorder);
+        return true;
+    }
+
+    private static void StartRenameAndFocusTextBox(
+        MainWindowViewModel viewModel,
+        TodoItemViewModel todo,
+        Border rowBorder)
+    {
         viewModel.StartRenameTodoCommand.Execute(todo);
 
         Dispatcher.UIThread.Post(() =>
         {
-            var row = renameButton.FindAncestorOfType<Border>();
-            if (row is null)
-            {
-                return;
-            }
-
-            var renameTextBox = row
+            var renameTextBox = rowBorder
                 .GetVisualDescendants()
                 .OfType<TextBox>()
                 .FirstOrDefault(control => control.IsVisible);
@@ -349,8 +389,39 @@ public partial class MainWindow : Window
             renameTextBox.Focus();
             renameTextBox.SelectAll();
         }, DispatcherPriority.Input);
+    }
 
-        e.Handled = true;
+    private static Border? FindTodoRowAncestor(Visual visual)
+    {
+        Visual? current = visual;
+        while (current is not null)
+        {
+            if (current is Border border && border.Classes.Contains("todoRow"))
+            {
+                return border;
+            }
+            current = current.GetVisualParent();
+        }
+        return null;
+    }
+
+    private static Border? FindFocusedTodoRow(Visual focused)
+    {
+        var ancestorRow = FindTodoRowAncestor(focused);
+        if (ancestorRow is not null)
+        {
+            return ancestorRow;
+        }
+
+        if (focused is ListBoxItem)
+        {
+            return focused
+                .GetVisualDescendants()
+                .OfType<Border>()
+                .FirstOrDefault(border => border.Classes.Contains("todoRow"));
+        }
+
+        return null;
     }
 
     private void TodoOverflowButton_OnClick(object? sender, RoutedEventArgs e)
@@ -465,6 +536,44 @@ public partial class MainWindow : Window
         }
 
         viewModel.CommitRenameTodoCommand.Execute(todo);
+    }
+
+    private void TodoRenameTextBox_OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel
+            || sender is not Control control
+            || control.DataContext is not TodoItemViewModel todo)
+        {
+            return;
+        }
+
+        if (e.Key == Key.Enter)
+        {
+            viewModel.CommitRenameTodoCommand.Execute(todo);
+        }
+        else if (e.Key == Key.Escape)
+        {
+            viewModel.CancelRenameTodoCommand.Execute(todo);
+        }
+        else
+        {
+            return;
+        }
+
+        var rowBorder = FindTodoRowAncestor(control);
+        if (rowBorder is not null)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                var renameButton = rowBorder
+                    .GetVisualDescendants()
+                    .OfType<Button>()
+                    .FirstOrDefault(button => button.Classes.Contains("renameTodoButton"));
+                renameButton?.Focus();
+            }, DispatcherPriority.Input);
+        }
+
+        e.Handled = true;
     }
 
     private void WidthPercentInput_OnLostFocus(object? sender, RoutedEventArgs e)

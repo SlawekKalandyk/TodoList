@@ -79,16 +79,8 @@
                         </StackPanel>
                         <TextBox IsVisible="{Binding IsRenaming}"
                                  Text="{Binding RenameText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 LostFocus="TodoRenameTextBox_OnLostFocus">
-                            <TextBox.KeyBindings>
-                                <KeyBinding Gesture="Enter"
-                                            Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).CommitRenameTodoCommand}"
-                                            CommandParameter="{Binding}" />
-                                <KeyBinding Gesture="Escape"
-                                            Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).CancelRenameTodoCommand}"
-                                            CommandParameter="{Binding}" />
-                            </TextBox.KeyBindings>
-                        </TextBox>
+                                 LostFocus="TodoRenameTextBox_OnLostFocus"
+                                 KeyDown="TodoRenameTextBox_OnKeyDown" />
                     </StackPanel>
                     <StackPanel Grid.Column="2"
                                 Orientation="Horizontal"
