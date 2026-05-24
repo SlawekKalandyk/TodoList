@@ -1,0 +1,72 @@
+name: release
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build but skip creating the release
+        type: boolean
+        default: false
+      version_override:
+        description: Override the calculated version (e.g. 1.2.3)
+        type: string
+        default: ''
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.semver.outputs.version }}
+      should_release: ${{ steps.semver.outputs.should_release }}
+      changelog: ${{ steps.semver.outputs.changelog }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: semver
+        uses: SlawomirKalandyk/build-tools/calculate-semver@v1.0.0
+        with:
+          version_override: ${{ github.event.inputs.version_override }}
+
+  build:
+    needs: version
+    if: needs.version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: SlawomirKalandyk/build-tools/setup-dotnet-cached@v1.0.0
+        with:
+          dotnet_version: '8.0.x'
+      - name: Restore
+        run: dotnet restore TodoList.slnx
+      - uses: SlawomirKalandyk/build-tools/publish-single-file-exe@v1.0.0
+        with:
+          project: src/TodoList.App/TodoList.App.csproj
+          rid: win-x64
+          version: ${{ needs.version.outputs.version }}
+          app_name: todolist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: artifacts/
+
+  release:
+    needs: [version, build]
+    if: needs.version.outputs.should_release == 'true' && github.event.inputs.dry_run != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+          path: artifacts/
+      - uses: SlawomirKalandyk/build-tools/gitea-release@v1.0.0
+        with:
+          version: ${{ needs.version.outputs.version }}
+          changelog: ${{ needs.version.outputs.changelog }}
+          asset_glob: artifacts/*.exe
+          token: ${{ secrets.RELEASE_TOKEN }}
