@@ -47,7 +47,7 @@ jobs:
           rid: win-x64
           version: ${{ needs.version.outputs.version }}
           app_name: todolist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v3
         with:
           name: release-artifacts
           path: artifacts/
@@ -60,7 +60,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v3
         with:
           name: release-artifacts
           path: artifacts/
